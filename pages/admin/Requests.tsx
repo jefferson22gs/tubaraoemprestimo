@@ -1,0 +1,318 @@
+
+import React, { useState, useEffect } from 'react';
+import { Check, X, Eye, Maximize, Layers, Download, Filter } from 'lucide-react';
+import { Button } from '../../components/Button';
+import { supabaseService } from '../../services/supabaseService';
+import { LoanRequest, LoanStatus } from '../../types';
+import { ImageViewer } from '../../components/ImageViewer';
+
+export const Requests: React.FC = () => {
+  const [requests, setRequests] = useState<LoanRequest[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<LoanRequest | null>(null);
+  const [viewingImage, setViewingImage] = useState<{ urls: string[]; title: string } | null>(null);
+  const [processing, setProcessing] = useState<string | null>(null);
+  
+  // Filters
+  const [filterStatus, setFilterStatus] = useState<string>('ALL');
+
+  useEffect(() => {
+    loadRequests();
+  }, []);
+
+  const loadRequests = async () => {
+    const data = await supabaseService.getRequests();
+    setRequests(data);
+  };
+
+  const handleApprove = async (id: string) => {
+    setProcessing(id);
+    await supabaseService.approveLoan(id);
+    setProcessing(null);
+    setSelectedRequest(null);
+    loadRequests();
+    alert("Solicitação aprovada e saldo liberado.");
+  };
+
+  const handleReject = async (id: string) => {
+    setProcessing(id);
+    await supabaseService.rejectLoan(id);
+    setProcessing(null);
+    setSelectedRequest(null);
+    loadRequests();
+  };
+
+  const ensureArray = (src?: string | string[]): string[] => {
+    if (!src) return [];
+    if (Array.isArray(src)) return src;
+    return [src];
+  };
+
+  const handleExportCSV = () => {
+    const headers = ["ID", "Cliente", "CPF", "Valor", "Parcelas", "Status", "Data"];
+    const rows = filteredRequests.map(r => [
+        r.id,
+        r.clientName,
+        r.cpf,
+        r.amount,
+        r.installments,
+        r.status,
+        new Date(r.date).toLocaleDateString()
+    ]);
+
+    let csvContent = "data:text/csv;charset=utf-8," 
+        + headers.join(",") + "\n" 
+        + rows.map(e => e.join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "solicitacoes_tubarao.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const filteredRequests = requests.filter(req => 
+    filterStatus === 'ALL' ? true : req.status === filterStatus
+  );
+
+  return (
+    <div className="p-8 bg-black min-h-screen text-white">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-[#D4AF37]">Histórico de Solicitações</h1>
+        <Button onClick={handleExportCSV} variant="secondary" className="bg-zinc-900 border border-zinc-800 hover:border-[#D4AF37]">
+            <Download size={18} className="mr-2"/> Exportar CSV
+        </Button>
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-2 mb-6">
+         {['ALL', LoanStatus.PENDING, LoanStatus.APPROVED, LoanStatus.REJECTED].map((status) => (
+             <button
+                key={status}
+                onClick={() => setFilterStatus(status)}
+                className={`px-4 py-2 rounded-full text-xs font-bold transition-colors border ${
+                    filterStatus === status 
+                    ? 'bg-[#D4AF37] text-black border-[#D4AF37]' 
+                    : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white'
+                }`}
+             >
+                {status === 'ALL' ? 'Todos' : status}
+             </button>
+         ))}
+      </div>
+
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl">
+        <table className="w-full text-left">
+          <thead className="bg-zinc-950 text-zinc-400">
+            <tr>
+              <th className="p-4 font-medium">Cliente</th>
+              <th className="p-4 font-medium">Valor</th>
+              <th className="p-4 font-medium">Parcelas</th>
+              <th className="p-4 font-medium">Status</th>
+              <th className="p-4 font-medium">Data</th>
+              <th className="p-4 font-medium">Ações</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-800">
+            {filteredRequests.length === 0 ? (
+                <tr><td colSpan={6} className="p-8 text-center text-zinc-500">Nenhuma solicitação encontrada com este filtro.</td></tr>
+            ) : (
+                filteredRequests.map((req) => (
+                <tr key={req.id} className="hover:bg-zinc-800/50 transition-colors">
+                    <td className="p-4">
+                    <div className="font-medium text-white">{req.clientName}</div>
+                    <div className="text-xs text-zinc-500">{req.cpf}</div>
+                    </td>
+                    <td className="p-4 font-bold text-[#D4AF37]">R$ {req.amount.toLocaleString()}</td>
+                    <td className="p-4">{req.installments}x</td>
+                    <td className="p-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                        req.status === LoanStatus.APPROVED ? 'bg-green-900/30 text-green-400' :
+                        req.status === LoanStatus.REJECTED ? 'bg-red-900/30 text-red-400' :
+                        'bg-yellow-900/30 text-yellow-400'
+                    }`}>
+                        {req.status}
+                    </span>
+                    </td>
+                    <td className="p-4 text-zinc-500 text-sm">
+                    {new Date(req.date).toLocaleDateString()}
+                    </td>
+                    <td className="p-4">
+                    <Button variant="secondary" size="sm" className="py-1 px-3" onClick={() => setSelectedRequest(req)}>
+                        <Eye size={16} className="mr-2" /> Detalhes
+                    </Button>
+                    </td>
+                </tr>
+                ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Advanced Review Modal */}
+      {selectedRequest && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
+            
+            {/* Header */}
+            <div className="flex justify-between items-center p-6 border-b border-zinc-800 bg-zinc-950">
+              <div>
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                  Análise de Crédito
+                  <span className={`text-xs px-2 py-1 rounded-full border ${
+                    selectedRequest.status === LoanStatus.APPROVED ? 'bg-green-900/30 text-green-500 border-green-800' :
+                    selectedRequest.status === LoanStatus.REJECTED ? 'bg-red-900/30 text-red-500 border-red-800' :
+                    'bg-yellow-900/30 text-yellow-500 border-yellow-800'
+                  }`}>
+                    {selectedRequest.status}
+                  </span>
+                </h2>
+                <p className="text-zinc-400 text-sm mt-1">ID: {selectedRequest.id} • {selectedRequest.email}</p>
+              </div>
+              <button onClick={() => setSelectedRequest(null)} className="p-2 hover:bg-zinc-800 rounded-full text-zinc-500 hover:text-white transition-colors">
+                <X size={24}/>
+              </button>
+            </div>
+
+            {/* Content Scrollable Area */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-8">
+              
+              {/* Financial Summary */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <InfoBox label="Cliente" value={selectedRequest.clientName} />
+                <InfoBox label="CPF" value={selectedRequest.cpf} />
+                <InfoBox label="Valor Solicitado" value={`R$ ${selectedRequest.amount.toLocaleString()}`} highlight />
+                <InfoBox label="Condição" value={`${selectedRequest.installments}x de R$ ${(selectedRequest.amount / selectedRequest.installments * 1.05).toLocaleString('pt-BR', {maximumFractionDigits: 2})}`} />
+              </div>
+
+              {/* Document Gallery */}
+              <div className="space-y-6">
+                
+                {/* Personal Documents */}
+                <div>
+                    <h3 className="text-[#D4AF37] font-bold text-sm uppercase tracking-wider border-b border-zinc-800 pb-2 mb-4">Documentação Pessoal</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <DocCard 
+                        title="Selfie (Prova de Vida)" 
+                        urls={ensureArray(selectedRequest.documents.selfieUrl)} 
+                        onView={() => setViewingImage({ urls: ensureArray(selectedRequest.documents.selfieUrl), title: "Selfie" })}
+                        />
+                        <DocCard 
+                        title="RG/CNH (Frente)" 
+                        urls={ensureArray(selectedRequest.documents.idCardUrl)} 
+                        onView={() => setViewingImage({ urls: ensureArray(selectedRequest.documents.idCardUrl), title: "RG/CNH Frente" })}
+                        />
+                        <DocCard 
+                        title="RG/CNH (Verso)" 
+                        urls={ensureArray(selectedRequest.documents.idCardBackUrl || selectedRequest.documents.idCardUrl)} 
+                        onView={() => setViewingImage({ urls: ensureArray(selectedRequest.documents.idCardBackUrl || selectedRequest.documents.idCardUrl), title: "RG/CNH Verso" })}
+                        />
+                    </div>
+                </div>
+
+                {/* Financial Documents */}
+                <div>
+                    <h3 className="text-[#D4AF37] font-bold text-sm uppercase tracking-wider border-b border-zinc-800 pb-2 mb-4">Comprovantes</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <DocCard 
+                        title="Comp. Residência" 
+                        urls={ensureArray(selectedRequest.documents.proofOfAddressUrl)} 
+                        onView={() => setViewingImage({ urls: ensureArray(selectedRequest.documents.proofOfAddressUrl), title: "Comp. Residência" })}
+                        />
+                        <DocCard 
+                        title="Comp. Renda" 
+                        urls={ensureArray(selectedRequest.documents.proofIncomeUrl)} 
+                        onView={() => setViewingImage({ urls: ensureArray(selectedRequest.documents.proofIncomeUrl), title: "Comp. Renda" })}
+                        />
+                        <DocCard 
+                        title="Assinatura Digital" 
+                        urls={ensureArray(selectedRequest.signatureUrl)} 
+                        isSignature 
+                        onView={() => setViewingImage({ urls: ensureArray(selectedRequest.signatureUrl), title: "Assinatura" })}
+                        />
+                    </div>
+                </div>
+
+                {/* Vehicle Documents (Conditional) */}
+                {selectedRequest.documents.vehicleUrl && ensureArray(selectedRequest.documents.vehicleUrl).length > 0 && (
+                   <div>
+                      <h3 className="text-[#D4AF37] font-bold text-sm uppercase tracking-wider border-b border-zinc-800 pb-2 mb-4">Garantia Veicular</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                         <DocCard 
+                            title="Veículo (Fotos)" 
+                            urls={ensureArray(selectedRequest.documents.vehicleUrl)} 
+                            onView={() => setViewingImage({ urls: ensureArray(selectedRequest.documents.vehicleUrl), title: "Veículo (Galeria)" })}
+                         />
+                      </div>
+                   </div>
+                )}
+              </div>
+            </div>
+
+            {/* Actions Footer */}
+            {selectedRequest.status === LoanStatus.PENDING && (
+                <div className="p-6 border-t border-zinc-800 bg-zinc-950 flex justify-between items-center">
+                <span className="text-xs text-zinc-500">
+                    Aprovação libera crédito imediato. Reprovação notifica o cliente.
+                </span>
+                <div className="flex gap-4">
+                    <Button variant="danger" onClick={() => handleReject(selectedRequest.id)} isLoading={processing === selectedRequest.id}>
+                    <X size={18} className="mr-2" /> REPROVAR
+                    </Button>
+                    <Button variant="gold" onClick={() => handleApprove(selectedRequest.id)} isLoading={processing === selectedRequest.id} className="bg-[#D4AF37] text-black font-bold hover:bg-[#B5942F]">
+                    <Check size={18} className="mr-2" /> APROVAR EMPRÉSTIMO
+                    </Button>
+                </div>
+                </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Full Screen Image Viewer */}
+      {viewingImage && (
+        <ImageViewer 
+          urls={viewingImage.urls} 
+          title={viewingImage.title} 
+          onClose={() => setViewingImage(null)} 
+        />
+      )}
+    </div>
+  );
+};
+
+// --- Local Components (Reused/Shared logic) ---
+
+const InfoBox = ({ label, value, highlight }: any) => (
+    <div className={`p-4 rounded-xl border ${highlight ? 'bg-zinc-800 border-[#D4AF37]/50' : 'bg-black border-zinc-800'}`}>
+        <p className="text-xs text-zinc-500 mb-1 uppercase tracking-wide">{label}</p>
+        <p className={`font-bold truncate ${highlight ? 'text-[#D4AF37] text-lg' : 'text-white'}`}>{value}</p>
+    </div>
+);
+
+const DocCard = ({ title, urls, isSignature, onView }: { title: string, urls: string[], isSignature?: boolean, onView: () => void }) => (
+    <div className="space-y-2 group">
+        <p className="text-xs text-zinc-400 pl-1">{title}</p>
+        <div className={`rounded-xl border border-zinc-800 bg-black overflow-hidden relative ${isSignature ? 'h-24 bg-white/5' : 'aspect-[4/3]'}`}>
+            {urls.length > 0 ? (
+                <img src={urls[0]} className={`w-full h-full ${isSignature ? 'object-contain p-2' : 'object-cover'} group-hover:scale-105 transition-transform duration-500 opacity-80 group-hover:opacity-100`} alt={title} />
+            ) : (
+                <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs">Pendente</div>
+            )}
+             
+             {/* Multi-page badge */}
+             {urls.length > 1 && (
+                 <div className="absolute top-2 right-2 bg-black/70 border border-zinc-700 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md flex items-center gap-1">
+                    <Layers size={10} className="text-[#D4AF37]" /> +{urls.length - 1}
+                 </div>
+             )}
+
+             {urls.length > 0 && (
+               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer" onClick={onView}>
+                  <Button size="sm" variant="secondary" className="shadow-xl"><Maximize size={14} className="mr-1"/> Ampliar</Button>
+               </div>
+             )}
+        </div>
+    </div>
+);
