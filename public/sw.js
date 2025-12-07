@@ -1,21 +1,77 @@
 
-// Service Worker for Tubarão Empréstimos PWA
+const CACHE_NAME = 'tubarao-cache-v1';
+const URLS_TO_CACHE = [
+  './',
+  './index.html',
+  './manifest.json'
+];
 
+// 1. Install Service Worker
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installed');
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('Opened cache');
+        return cache.addAll(URLS_TO_CACHE);
+      })
+  );
   self.skipWaiting();
 });
 
+// 2. Activate Service Worker (Clean old caches)
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activated');
+  const cacheWhitelist = [CACHE_NAME];
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheWhitelist.indexOf(cacheName) === -1) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
   event.waitUntil(self.clients.claim());
 });
 
-// Handle Push Notifications
+// 3. Fetch Strategy (Stale-While-Revalidate)
+self.addEventListener('fetch', (event) => {
+  // Ignora requisições de API/externas para cache, foca em assets
+  if (event.request.url.startsWith('http') && !event.request.url.includes('api')) {
+      event.respondWith(
+        caches.match(event.request)
+          .then((response) => {
+            // Cache hit - return response
+            if (response) {
+              return response;
+            }
+            return fetch(event.request).then(
+              (response) => {
+                // Check if we received a valid response
+                if(!response || response.status !== 200 || response.type !== 'basic') {
+                  return response;
+                }
+
+                // Clone the response
+                const responseToCache = response.clone();
+
+                caches.open(CACHE_NAME)
+                  .then((cache) => {
+                    cache.put(event.request, responseToCache);
+                  });
+
+                return response;
+              }
+            );
+          })
+      );
+  }
+});
+
+// 4. Push Notifications Handler
 self.addEventListener('push', (event) => {
-  console.log('Service Worker: Push Received');
-  
-  let data = { title: 'Tubarão Empréstimos', body: 'Nova atualização disponível!', icon: '/icon-192x192.png' };
+  let data = { title: 'Tubarão Empréstimos', body: 'Nova atualização disponível!', icon: 'https://cdn.jsdelivr.net/npm/twemoji@11.3.0/2/72x72/1f988.png' };
   
   if (event.data) {
     try {
@@ -27,8 +83,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: '/icon-192x192.png',
-    badge: '/icon-192x192.png',
+    icon: data.icon,
+    badge: data.icon,
     vibrate: [100, 50, 100],
     data: {
       dateOfArrival: Date.now(),
@@ -47,19 +103,6 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.openWindow('/client/dashboard')
+    clients.openWindow('/')
   );
-});
-
-// Simulating a background sync for "Check installments"
-self.addEventListener('sync', (event) => {
-    if (event.tag === 'check-installments') {
-        event.waitUntil(
-            // logic to check local db and trigger notification
-            self.registration.showNotification('Lembrete de Pagamento', {
-                body: 'Sua parcela vence amanhã. Evite juros!',
-                icon: '/icon-192x192.png'
-            })
-        );
-    }
 });
