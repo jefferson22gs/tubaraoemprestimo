@@ -73,8 +73,8 @@ export const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="p-8 bg-black min-h-screen text-white">
-      <div className="flex justify-between items-center mb-8">
+    <div className="p-4 md:p-8 bg-black min-h-screen text-white">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
          <h1 className="text-3xl font-bold text-[#D4AF37]">Visão Geral</h1>
          <div className="flex items-center gap-2 text-xs text-zinc-500 bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Sistema Online
@@ -87,7 +87,7 @@ export const Dashboard: React.FC = () => {
          {/* Main Content Area */}
          <div className="lg:col-span-3 space-y-8">
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 <KPICard title="Total Emprestado" value={1250000} prefix="R$" icon={DollarSign} trend="+12%" />
                 <KPICard title="Clientes Ativos" value={342} icon={Users} trend="+5%" />
                 <KPICard title="Inadimplência" value={2.4} suffix="%" icon={AlertTriangle} trend="-0.5%" isBad={false} />
@@ -100,8 +100,8 @@ export const Dashboard: React.FC = () => {
                 <AlertTriangle className="text-[#D4AF37]" /> Solicitações Pendentes
                 </h2>
                 
-                <div className="overflow-x-auto">
-                <table className="w-full text-left">
+                <div className="overflow-x-auto -mx-6 md:mx-0 px-6 md:px-0">
+                <table className="w-full text-left min-w-[600px]">
                     <thead className="bg-zinc-950 text-zinc-400 text-sm uppercase tracking-wider">
                     <tr>
                         <th className="p-4 rounded-tl-xl">Cliente</th>
@@ -140,7 +140,7 @@ export const Dashboard: React.FC = () => {
             </div>
 
             {/* Existing Charts */}
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl">
                 <h3 className="text-lg font-semibold mb-6">Volume de Empréstimos</h3>
                 <div className="h-[250px] w-full">
@@ -221,13 +221,13 @@ export const Dashboard: React.FC = () => {
 
       {/* Review Modal */}
       {selectedRequest && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-0 md:p-4">
+          <div className="bg-zinc-900 border border-zinc-800 md:rounded-2xl w-full max-w-5xl h-full md:max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
             {/* Modal Header */}
             <div className="flex justify-between items-center p-6 border-b border-zinc-800 bg-zinc-950">
               <div>
                 <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                  Análise de Crédito
+                  Análise
                   <span className="text-xs bg-yellow-900/30 text-yellow-500 px-2 py-1 rounded-full border border-yellow-700/30">PENDENTE</span>
                 </h2>
                 <p className="text-zinc-400 text-sm mt-1">Solicitação: #{selectedRequest.id}</p>
@@ -286,16 +286,16 @@ export const Dashboard: React.FC = () => {
             </div>
 
             {/* Modal Actions */}
-            <div className="p-6 border-t border-zinc-800 bg-zinc-950 flex justify-between items-center">
-              <span className="text-xs text-zinc-500">
+            <div className="p-6 border-t border-zinc-800 bg-zinc-950 flex flex-col md:flex-row justify-between items-center gap-4">
+              <span className="text-xs text-zinc-500 text-center md:text-left">
                 Aprovar liberará o saldo imediatamente na carteira do usuário.
               </span>
-              <div className="flex gap-4">
-                <Button variant="danger" onClick={() => handleReject(selectedRequest.id)} isLoading={processing === selectedRequest.id}>
+              <div className="flex gap-4 w-full md:w-auto">
+                <Button variant="danger" className="flex-1 md:flex-initial" onClick={() => handleReject(selectedRequest.id)} isLoading={processing === selectedRequest.id}>
                   <X size={18} className="mr-2" /> REPROVAR
                 </Button>
-                <Button variant="gold" onClick={() => handleApprove(selectedRequest.id)} isLoading={processing === selectedRequest.id} className="bg-[#D4AF37] text-black font-bold hover:bg-[#B5942F]">
-                  <Check size={18} className="mr-2" /> APROVAR EMPRÉSTIMO
+                <Button variant="gold" className="flex-1 md:flex-initial bg-[#D4AF37] text-black font-bold hover:bg-[#B5942F]" onClick={() => handleApprove(selectedRequest.id)} isLoading={processing === selectedRequest.id}>
+                  <Check size={18} className="mr-2" /> APROVAR
                 </Button>
               </div>
             </div>

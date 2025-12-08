@@ -95,21 +95,21 @@ export const Customers: React.FC = () => {
   );
 
   return (
-    <div className="p-8 bg-black min-h-screen text-white">
-      <div className="flex justify-between items-center mb-8">
+    <div className="p-4 md:p-8 bg-black min-h-screen text-white">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <h1 className="text-3xl font-bold text-[#D4AF37]">Gestão de Clientes</h1>
-        <div className="flex gap-4">
-            <div className="relative">
+        <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+            <div className="relative w-full md:w-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={20} />
             <input 
                 type="text" 
                 placeholder="Buscar por nome ou CPF..." 
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
-                className="bg-zinc-900 border border-zinc-800 rounded-lg pl-10 pr-4 py-2 text-white focus:border-[#D4AF37] outline-none w-64 md:w-80"
+                className="w-full md:w-80 bg-zinc-900 border border-zinc-800 rounded-lg pl-10 pr-4 py-2 text-white focus:border-[#D4AF37] outline-none"
             />
             </div>
-            <Button onClick={handleExportCSV} variant="secondary" className="bg-zinc-900 border border-zinc-800 hover:border-[#D4AF37]">
+            <Button onClick={handleExportCSV} variant="secondary" className="w-full md:w-auto bg-zinc-900 border border-zinc-800 hover:border-[#D4AF37]">
                 <Download size={18} className="mr-2"/> Exportar CSV
             </Button>
         </div>
@@ -117,7 +117,7 @@ export const Customers: React.FC = () => {
 
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl">
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left min-w-[800px]">
             <thead className="bg-zinc-950 text-zinc-400 text-sm uppercase tracking-wider">
               <tr>
                 <th className="p-4">Cliente</th>

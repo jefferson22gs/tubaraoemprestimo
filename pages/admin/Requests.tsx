@@ -77,16 +77,16 @@ export const Requests: React.FC = () => {
   );
 
   return (
-    <div className="p-8 bg-black min-h-screen text-white">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-[#D4AF37]">Histórico de Solicitações</h1>
-        <Button onClick={handleExportCSV} variant="secondary" className="bg-zinc-900 border border-zinc-800 hover:border-[#D4AF37]">
+    <div className="p-4 md:p-8 bg-black min-h-screen text-white">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <h1 className="text-3xl font-bold text-[#D4AF37]">Histórico</h1>
+        <Button onClick={handleExportCSV} variant="secondary" className="w-full md:w-auto bg-zinc-900 border border-zinc-800 hover:border-[#D4AF37]">
             <Download size={18} className="mr-2"/> Exportar CSV
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
          {['ALL', LoanStatus.PENDING, LoanStatus.APPROVED, LoanStatus.REJECTED].map((status) => (
              <button
                 key={status}
@@ -103,57 +103,59 @@ export const Requests: React.FC = () => {
       </div>
 
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl">
-        <table className="w-full text-left">
-          <thead className="bg-zinc-950 text-zinc-400">
-            <tr>
-              <th className="p-4 font-medium">Cliente</th>
-              <th className="p-4 font-medium">Valor</th>
-              <th className="p-4 font-medium">Parcelas</th>
-              <th className="p-4 font-medium">Status</th>
-              <th className="p-4 font-medium">Data</th>
-              <th className="p-4 font-medium">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-800">
-            {filteredRequests.length === 0 ? (
-                <tr><td colSpan={6} className="p-8 text-center text-zinc-500">Nenhuma solicitação encontrada com este filtro.</td></tr>
-            ) : (
-                filteredRequests.map((req) => (
-                <tr key={req.id} className="hover:bg-zinc-800/50 transition-colors">
-                    <td className="p-4">
-                    <div className="font-medium text-white">{req.clientName}</div>
-                    <div className="text-xs text-zinc-500">{req.cpf}</div>
-                    </td>
-                    <td className="p-4 font-bold text-[#D4AF37]">R$ {req.amount.toLocaleString()}</td>
-                    <td className="p-4">{req.installments}x</td>
-                    <td className="p-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                        req.status === LoanStatus.APPROVED ? 'bg-green-900/30 text-green-400' :
-                        req.status === LoanStatus.REJECTED ? 'bg-red-900/30 text-red-400' :
-                        'bg-yellow-900/30 text-yellow-400'
-                    }`}>
-                        {req.status}
-                    </span>
-                    </td>
-                    <td className="p-4 text-zinc-500 text-sm">
-                    {new Date(req.date).toLocaleDateString()}
-                    </td>
-                    <td className="p-4">
-                    <Button variant="secondary" size="sm" className="py-1 px-3" onClick={() => setSelectedRequest(req)}>
-                        <Eye size={16} className="mr-2" /> Detalhes
-                    </Button>
-                    </td>
+        <div className="overflow-x-auto">
+            <table className="w-full text-left min-w-[800px]">
+            <thead className="bg-zinc-950 text-zinc-400">
+                <tr>
+                <th className="p-4 font-medium">Cliente</th>
+                <th className="p-4 font-medium">Valor</th>
+                <th className="p-4 font-medium">Parcelas</th>
+                <th className="p-4 font-medium">Status</th>
+                <th className="p-4 font-medium">Data</th>
+                <th className="p-4 font-medium">Ações</th>
                 </tr>
-                ))
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-zinc-800">
+                {filteredRequests.length === 0 ? (
+                    <tr><td colSpan={6} className="p-8 text-center text-zinc-500">Nenhuma solicitação encontrada com este filtro.</td></tr>
+                ) : (
+                    filteredRequests.map((req) => (
+                    <tr key={req.id} className="hover:bg-zinc-800/50 transition-colors">
+                        <td className="p-4">
+                        <div className="font-medium text-white">{req.clientName}</div>
+                        <div className="text-xs text-zinc-500">{req.cpf}</div>
+                        </td>
+                        <td className="p-4 font-bold text-[#D4AF37]">R$ {req.amount.toLocaleString()}</td>
+                        <td className="p-4">{req.installments}x</td>
+                        <td className="p-4">
+                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                            req.status === LoanStatus.APPROVED ? 'bg-green-900/30 text-green-400' :
+                            req.status === LoanStatus.REJECTED ? 'bg-red-900/30 text-red-400' :
+                            'bg-yellow-900/30 text-yellow-400'
+                        }`}>
+                            {req.status}
+                        </span>
+                        </td>
+                        <td className="p-4 text-zinc-500 text-sm">
+                        {new Date(req.date).toLocaleDateString()}
+                        </td>
+                        <td className="p-4">
+                        <Button variant="secondary" size="sm" className="py-1 px-3" onClick={() => setSelectedRequest(req)}>
+                            <Eye size={16} className="mr-2" /> Detalhes
+                        </Button>
+                        </td>
+                    </tr>
+                    ))
+                )}
+            </tbody>
+            </table>
+        </div>
       </div>
 
       {/* Advanced Review Modal */}
       {selectedRequest && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-0 md:p-4">
+          <div className="bg-zinc-900 border border-zinc-800 md:rounded-2xl w-full max-w-6xl h-full md:max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
             
             {/* Header */}
             <div className="flex justify-between items-center p-6 border-b border-zinc-800 bg-zinc-950">
@@ -252,15 +254,15 @@ export const Requests: React.FC = () => {
 
             {/* Actions Footer */}
             {selectedRequest.status === LoanStatus.PENDING && (
-                <div className="p-6 border-t border-zinc-800 bg-zinc-950 flex justify-between items-center">
-                <span className="text-xs text-zinc-500">
+                <div className="p-6 border-t border-zinc-800 bg-zinc-950 flex flex-col md:flex-row justify-between items-center gap-4">
+                <span className="text-xs text-zinc-500 text-center md:text-left">
                     Aprovação libera crédito imediato. Reprovação notifica o cliente.
                 </span>
-                <div className="flex gap-4">
-                    <Button variant="danger" onClick={() => handleReject(selectedRequest.id)} isLoading={processing === selectedRequest.id}>
+                <div className="flex gap-4 w-full md:w-auto">
+                    <Button variant="danger" className="flex-1 md:flex-initial" onClick={() => handleReject(selectedRequest.id)} isLoading={processing === selectedRequest.id}>
                     <X size={18} className="mr-2" /> REPROVAR
                     </Button>
-                    <Button variant="gold" onClick={() => handleApprove(selectedRequest.id)} isLoading={processing === selectedRequest.id} className="bg-[#D4AF37] text-black font-bold hover:bg-[#B5942F]">
+                    <Button variant="gold" className="flex-1 md:flex-initial bg-[#D4AF37] text-black font-bold hover:bg-[#B5942F]" onClick={() => handleApprove(selectedRequest.id)} isLoading={processing === selectedRequest.id}>
                     <Check size={18} className="mr-2" /> APROVAR EMPRÉSTIMO
                     </Button>
                 </div>

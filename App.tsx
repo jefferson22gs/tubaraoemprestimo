@@ -22,7 +22,7 @@ import { BottomNav } from './components/BottomNav';
 import { SplashScreen } from './components/SplashScreen';
 import { InstallPrompt } from './components/InstallPrompt';
 import { ToastProvider } from './components/Toast';
-import { LayoutDashboard, FileText, Settings as SettingsIcon, LogOut, Users, Bot } from 'lucide-react';
+import { LayoutDashboard, FileText, Settings as SettingsIcon, LogOut, Users, Bot, Menu, X } from 'lucide-react';
 import { Logo } from './components/Logo';
 import { supabaseService } from './services/supabaseService';
 import { BrandProvider, useBrand } from './contexts/BrandContext'; // Import Context
@@ -31,6 +31,8 @@ import { BrandProvider, useBrand } from './contexts/BrandContext'; // Import Con
 
 const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
   const isActive = (path: string) => location.pathname === path ? 'text-[#D4AF37] bg-zinc-800' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50';
   const user = supabaseService.auth.getUser();
   const { settings } = useBrand(); // Use Brand Name
@@ -39,24 +41,54 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       return <Navigate to="/login" replace />;
   }
 
+  const NavContent = () => (
+    <>
+      <div className="p-6 border-b border-zinc-800 flex justify-center">
+        <Logo size="sm" />
+      </div>
+      <nav className="flex-1 p-4 space-y-2">
+        <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin')}`}><LayoutDashboard size={20} /> Dashboard</Link>
+        <Link to="/admin/requests" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/requests')}`}><FileText size={20} /> Solicitações</Link>
+        <Link to="/admin/customers" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/customers')}`}><Users size={20} /> Clientes</Link>
+        <Link to="/admin/interactions" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/interactions')}`}><Bot size={20} /> IA Logs</Link>
+        <Link to="/admin/settings" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/settings')}`}><SettingsIcon size={20} /> Configurações</Link>
+      </nav>
+      <div className="p-4 border-t border-zinc-800">
+        <Link to="/login" className="flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-900/10 rounded-lg transition-all"><LogOut size={20} /> Sair</Link>
+      </div>
+    </>
+  );
+
   return (
     <div className="flex h-screen bg-black text-white overflow-hidden font-sans">
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 w-full z-50 bg-zinc-950 border-b border-zinc-800 p-4 flex justify-between items-center">
+         <div className="flex items-center gap-2">
+            <span className="font-bold text-[#D4AF37] tracking-wider text-sm">ADMIN PANEL</span>
+         </div>
+         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-zinc-400 hover:text-white">
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+         </button>
+      </div>
+
+      {/* Desktop Sidebar */}
       <aside className="w-64 border-r border-zinc-800 bg-zinc-950 hidden md:flex flex-col">
-        <div className="p-6 border-b border-zinc-800 flex justify-center">
-          <Logo size="sm" />
-        </div>
-        <nav className="flex-1 p-4 space-y-2">
-          <Link to="/admin" className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin')}`}><LayoutDashboard size={20} /> Dashboard</Link>
-          <Link to="/admin/requests" className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/requests')}`}><FileText size={20} /> Solicitações</Link>
-          <Link to="/admin/customers" className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/customers')}`}><Users size={20} /> Clientes</Link>
-          <Link to="/admin/interactions" className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/interactions')}`}><Bot size={20} /> IA Logs</Link>
-          <Link to="/admin/settings" className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/settings')}`}><SettingsIcon size={20} /> Configurações</Link>
-        </nav>
-        <div className="p-4 border-t border-zinc-800">
-          <Link to="/login" className="flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-900/10 rounded-lg transition-all"><LogOut size={20} /> Sair</Link>
-        </div>
+        <NavContent />
       </aside>
-      <main className="flex-1 overflow-auto relative bg-black">{children}</main>
+
+      {/* Mobile Sidebar (Drawer) */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-40 bg-black/80 md:hidden backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}>
+           <aside className="w-64 h-full bg-zinc-950 border-r border-zinc-800 flex flex-col pt-16 animate-in slide-in-from-left duration-200" onClick={e => e.stopPropagation()}>
+              <NavContent />
+           </aside>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto relative bg-black pt-16 md:pt-0">
+        {children}
+      </main>
     </div>
   );
 };
