@@ -1,7 +1,7 @@
-
 import React, { useEffect, useState } from 'react';
 import { Download, X, Share } from 'lucide-react';
 import { Button } from './Button';
+import { Logo } from './Logo';
 
 export const InstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -68,8 +68,8 @@ export const InstallPrompt: React.FC = () => {
         </button>
 
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-black rounded-xl border border-zinc-800 flex items-center justify-center text-3xl shadow-lg shrink-0">
-            🦈
+          <div className="bg-black rounded-xl border border-zinc-800 flex items-center justify-center shadow-lg shrink-0 p-2">
+            <Logo size="sm" showText={false} />
           </div>
           <div className="flex-1">
             <h3 className="text-white font-bold text-sm">Instalar Aplicativo</h3>

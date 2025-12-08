@@ -27,7 +27,7 @@ export interface LoanRequest {
   clientName: string;
   cpf: string;
   email: string;
-  phone: string; // Added for WhatsApp integration
+  phone: string; 
   amount: number;
   installments: number;
   status: LoanStatus;
@@ -55,6 +55,15 @@ export interface SystemSettings {
   lateFeeRate: number;
 }
 
+// --- BRANDING / WHITE LABEL ---
+export interface BrandSettings {
+  systemName: string;
+  logoUrl: string | null; // null usa o logo padrão (Tubarão)
+  primaryColor: string;   // Cor de Ação (ex: Vermelho Tubarão)
+  secondaryColor: string; // Cor de Destaque (ex: Dourado)
+  backgroundColor: string; // Cor de Fundo (Geralmente preto ou escuro)
+}
+
 // --- NEW TYPES FOR CRM & AUTOMATION ---
 
 export interface Customer {
@@ -74,7 +83,7 @@ export type CollectionRuleType = 'WHATSAPP' | 'EMAIL' | 'SMS';
 
 export interface CollectionRule {
   id: string;
-  daysOffset: number; // -3 (3 days before), 0 (due date), 5 (5 days after)
+  daysOffset: number; 
   type: CollectionRuleType;
   messageTemplate: string;
   active: boolean;
@@ -86,8 +95,8 @@ export interface Installment {
   amount: number;
   status: 'OPEN' | 'PAID' | 'LATE';
   pixCode?: string;
-  proofUrl?: string; // New: Link to payment proof
-  paidAt?: string;   // New: Date of payment
+  proofUrl?: string; 
+  paidAt?: string;   
 }
 
 export interface Loan {
@@ -100,17 +109,15 @@ export interface Loan {
   installments: Installment[];
 }
 
-// --- EXTRACT / STATEMENT ---
 export interface Transaction {
   id: string;
-  type: 'IN' | 'OUT'; // IN = Empréstimo Recebido, OUT = Pagamento Parcela
+  type: 'IN' | 'OUT'; 
   description: string;
   amount: number;
   date: string;
   category: 'LOAN' | 'PAYMENT' | 'FEE';
 }
 
-// --- AI LOGS ---
 export interface InteractionLog {
   id: string;
   userName: string;
@@ -121,7 +128,6 @@ export interface InteractionLog {
   timestamp: string;
 }
 
-// --- WHATSAPP INTEGRATION ---
 export interface WhatsappConfig {
   apiUrl: string;
   apiKey: string;

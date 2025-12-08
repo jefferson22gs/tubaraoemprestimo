@@ -9,6 +9,7 @@ export interface AIResponse {
 export const aiService = {
   /**
    * Analyzes a user message using Google Gemini (REST API) to determine intent.
+   * Simulates the logic for POST /api/webhooks/whatsapp
    */
   analyzeMessage: async (text: string): Promise<AIResponse> => {
     try {

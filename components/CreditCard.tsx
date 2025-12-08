@@ -1,5 +1,5 @@
-
 import React from 'react';
+import { Logo } from './Logo';
 
 interface CreditCardProps {
   name?: string;
@@ -16,11 +16,8 @@ export const CreditCard: React.FC<CreditCardProps> = ({ name = 'CLIENTE VIP' }) 
 
       <div className="relative z-10 flex flex-col justify-between h-full">
         <div className="flex justify-between items-start">
-          <div className="text-[#D4AF37] font-bold tracking-widest text-sm flex items-center gap-2">
-             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#FF0000]">
-                 <path d="M22 19.5C22 19.5 19 19.5 17 17.5C15 15.5 14 12 14 12L12 2C12 2 10 11 6 15C2 19 2 22 2 22H22V19.5Z" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-              </svg>
-             TUBARÃO <span className="text-white text-[10px] bg-black/50 px-1 rounded border border-zinc-800">BLACK</span>
+          <div className="scale-75 origin-top-left">
+             <Logo size="sm" />
           </div>
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" className="opacity-50">
              <path d="M2 10C2 10 4 12 6 12C8 12 10 10 12 10C14 10 16 12 18 12C20 12 22 10 22 10" stroke="white" strokeWidth="2" strokeLinecap="round"/>

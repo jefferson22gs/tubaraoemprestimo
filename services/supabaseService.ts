@@ -1,5 +1,5 @@
 
-import { LoanRequest, LoanStatus, LoanPackage, SystemSettings, Customer, CollectionRule, Loan, InteractionLog, Transaction, WhatsappConfig } from '../types';
+import { LoanRequest, LoanStatus, LoanPackage, SystemSettings, Customer, CollectionRule, Loan, InteractionLog, Transaction, WhatsappConfig, BrandSettings } from '../types';
 
 // --- STORAGE HELPERS ---
 const STORAGE_KEYS = {
@@ -11,7 +11,8 @@ const STORAGE_KEYS = {
   PACKAGES: 'tubarao_packages',
   RULES: 'tubarao_rules',
   WA_CONFIG: 'tubarao_wa_config',
-  USER: 'tubarao_user'
+  USER: 'tubarao_user',
+  BRAND: 'tubarao_brand_config' // Nova chave
 };
 
 const loadFromStorage = <T>(key: string, defaultValue: T): T => {
@@ -33,7 +34,7 @@ const saveToStorage = (key: string, data: any) => {
   }
 };
 
-// --- INITIAL MOCK DATA (Factory Defaults) ---
+// --- INITIAL MOCK DATA ---
 
 const DEFAULT_PACKAGES: LoanPackage[] = [
   {
@@ -113,6 +114,14 @@ const DEFAULT_WHATSAPP_CONFIG: WhatsappConfig = {
   apiKey: 'global-api-key',
   instanceName: 'tubarao_fintech',
   isConnected: false
+};
+
+const DEFAULT_BRAND_SETTINGS: BrandSettings = {
+  systemName: "TUBARÃO EMPRÉSTIMO",
+  logoUrl: null, // null means use default SVG
+  primaryColor: "#FF0000",
+  secondaryColor: "#D4AF37",
+  backgroundColor: "#000000"
 };
 
 const DEFAULT_CUSTOMERS: Customer[] = [
@@ -217,7 +226,6 @@ const MOCK_INTERACTIONS: InteractionLog[] = [
 // --- SERVICE IMPLEMENTATION ---
 
 export const supabaseService = {
-  // RESET METHOD FOR DEMO
   resetSystem: async () => {
     localStorage.clear();
     window.location.reload();
@@ -228,13 +236,11 @@ export const supabaseService = {
         return new Promise((resolve) => {
             setTimeout(() => {
                 const isAdmin = credentials.identifier.toLowerCase().includes('admin') || credentials.identifier === '000.000.000-00';
-                
-                // Get existing user to preserve avatar if re-logging in
                 const storedUser = loadFromStorage<any>(STORAGE_KEYS.USER, null);
 
                 const user = {
                     id: isAdmin ? 'admin_1' : 'client_1',
-                    name: isAdmin ? 'Tubarão Admin' : (credentials.identifier === '123.456.789-00' ? 'Marcos Vinícius' : 'Novo Cliente'),
+                    name: isAdmin ? 'Admin' : (credentials.identifier === '123.456.789-00' ? 'Marcos Vinícius' : 'Novo Cliente'),
                     role: isAdmin ? 'ADMIN' : 'CLIENT',
                     token: 'mock_token_' + Date.now(),
                     avatarUrl: storedUser?.avatarUrl || null 
@@ -261,6 +267,21 @@ export const supabaseService = {
         return true;
     }
     return false;
+  },
+
+  // --- BRANDING METHODS ---
+  getBrandSettings: async (): Promise<BrandSettings> => {
+    return loadFromStorage(STORAGE_KEYS.BRAND, DEFAULT_BRAND_SETTINGS);
+  },
+
+  updateBrandSettings: async (settings: BrandSettings): Promise<boolean> => {
+    saveToStorage(STORAGE_KEYS.BRAND, settings);
+    return true;
+  },
+
+  resetBrandSettings: async (): Promise<BrandSettings> => {
+    saveToStorage(STORAGE_KEYS.BRAND, DEFAULT_BRAND_SETTINGS);
+    return DEFAULT_BRAND_SETTINGS;
   },
 
   getPackages: async (): Promise<LoanPackage[]> => {
@@ -399,7 +420,7 @@ export const supabaseService = {
 
         // Update Customer stats
         const customers = loadFromStorage(STORAGE_KEYS.CUSTOMERS, DEFAULT_CUSTOMERS);
-        const customer = customers.find(c => c.cpf === req.cpf) || customers[0]; // Fallback to first if not found (demo)
+        const customer = customers.find(c => c.cpf === req.cpf) || customers[0]; 
         if (customer) {
             customer.activeLoansCount += 1;
             customer.totalDebt += req.amount * 1.3;
@@ -477,7 +498,6 @@ export const supabaseService = {
             
             saveToStorage(STORAGE_KEYS.LOANS, loans);
 
-            // Add Transaction Log
             const transactions = loadFromStorage(STORAGE_KEYS.TRANSACTIONS, DEFAULT_TRANSACTIONS);
             transactions.unshift({
                 id: `tx_pay_${Date.now()}`,
@@ -498,7 +518,7 @@ export const supabaseService = {
   },
 
   getInteractionLogs: async (): Promise<InteractionLog[]> => {
-    return MOCK_INTERACTIONS; // Static for now
+    return MOCK_INTERACTIONS;
   },
 
   getWhatsappConfig: async (): Promise<WhatsappConfig> => {

@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, ArrowRight, ShieldCheck, ScanFace, AlertCircle } from 'lucide-react';
 import { Button } from '../../components/Button';
+import { Logo } from '../../components/Logo';
 import { supabaseService } from '../../services/supabaseService';
 
 export const Login: React.FC = () => {
@@ -87,17 +87,9 @@ export const Login: React.FC = () => {
 
       <div className="w-full max-w-md z-10">
         {/* Logo */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center gap-3 mb-4">
-             {/* Shark Fin Icon */}
-             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-shark">
-               <path d="M22 19.5C22 19.5 19 19.5 17 17.5C15 15.5 14 12 14 12L12 2C12 2 10 11 6 15C2 19 2 22 2 22H22V19.5Z" fill="#FF0000" stroke="#FF0000" strokeWidth="2" strokeLinejoin="round"/>
-             </svg>
-             <h1 className="text-4xl font-black tracking-tighter text-white">
-               TUBARÃO
-             </h1>
-          </div>
-          <p className="text-zinc-500 uppercase tracking-widest text-xs">Portal de Acesso</p>
+        <div className="flex flex-col items-center justify-center gap-3 mb-12">
+             <Logo size="lg" />
+             <p className="text-zinc-500 uppercase tracking-widest text-xs mt-2">Portal de Acesso</p>
         </div>
 
         {/* Login Form */}

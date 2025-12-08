@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calculator, ShieldCheck, Zap, ArrowRight, DollarSign } from 'lucide-react';
 import { Button } from '../../components/Button';
+import { Logo } from '../../components/Logo';
 import { supabaseService } from '../../services/supabaseService';
 import { LoanPackage } from '../../types';
 
@@ -33,8 +34,13 @@ export const Home: React.FC = () => {
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0,rgba(212,175,55,0.15),transparent_70%)]"></div>
         
         <div className="container mx-auto px-4 pt-20 pb-12 relative z-10">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
+          <div className="text-center max-w-3xl mx-auto mb-16 flex flex-col items-center">
+            
+            <div className="mb-8 scale-110">
+                <Logo size="lg" />
+            </div>
+
+            <h1 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight">
               Crédito <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] to-[#FFF]">Premium</span> para seus Sonhos
             </h1>
             <p className="text-xl text-zinc-400 mb-8">
