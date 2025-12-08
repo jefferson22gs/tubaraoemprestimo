@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useBrand } from '../contexts/BrandContext';
 
@@ -7,9 +6,10 @@ interface LogoProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   showText?: boolean;
 }
 
+// Named Export to match import { Logo }
 export const Logo: React.FC<LogoProps> = ({ 
   size = 'md', 
-  showText = true, // Mantido para compatibilidade, mas o PNG geralmente já tem texto
+  showText = true, 
   className = '',
   ...props 
 }) => {
@@ -22,9 +22,9 @@ export const Logo: React.FC<LogoProps> = ({
     xl: "120px"
   };
 
-  // Lógica:
-  // 1. Tenta usar o logo enviado pelo Admin (settings.logoUrl)
-  // 2. Se não existir, usa o arquivo local na raiz (/logo.png)
+  // Logic: 
+  // 1. Use Admin Uploaded URL (settings.logoUrl)
+  // 2. Fallback to local default file (/logo.png)
   const source = settings.logoUrl || "/logo.png";
 
   return (
@@ -35,9 +35,9 @@ export const Logo: React.FC<LogoProps> = ({
       style={{ height: heightMap[size] }}
       {...props}
       onError={(e) => {
-        // Fallback visual caso a imagem não carregue
+        // Fallback if image fails to load
         e.currentTarget.style.display = 'none';
-        e.currentTarget.parentElement?.insertAdjacentHTML('beforeend', `<span style="color:white;font-weight:bold;">${settings.systemName}</span>`);
+        e.currentTarget.parentElement?.insertAdjacentHTML('beforeend', `<span style="color:white;font-weight:bold;font-size:${heightMap[size] === '30px' ? '1.2rem' : '2rem'}">${settings.systemName}</span>`);
       }}
     />
   );

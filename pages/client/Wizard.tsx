@@ -1,11 +1,12 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronRight, ChevronLeft, Upload, User, MapPin, Camera as CameraIcon, PenTool, AlertCircle, FileText, Image as ImageIcon, Car, ScanFace, X, Plus } from 'lucide-react';
+import { Check, ChevronRight, ChevronLeft, Upload, User, MapPin, Camera as CameraIcon, PenTool, AlertCircle, FileText, Image as ImageIcon, Car, ScanFace, X, Plus, Loader2 } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Camera } from '../../components/Camera';
 import { SignaturePad } from '../../components/SignaturePad';
 import { supabaseService } from '../../services/supabaseService';
+import { aiService } from '../../services/aiService';
 import { useToast } from '../../components/Toast';
 
 const steps = [
@@ -21,7 +22,8 @@ export const Wizard: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [verifyingBiometrics, setVerifyingBiometrics] = useState(false);
-  const [errors, setErrors] = useState<{ cpf?: string; cep?: string; biometrics?: string }>({});
+  const [analyzingDocs, setAnalyzingDocs] = useState(false);
+  const [errors, setErrors] = useState<{ cpf?: string; cep?: string; biometrics?: string; doc?: string }>({});
   const [showTerms, setShowTerms] = useState(false);
   
   // State updated to hold arrays for files
@@ -132,6 +134,53 @@ export const Wizard: React.FC = () => {
       });
   };
 
+  const validateDocuments = async (): Promise<boolean> => {
+    setAnalyzingDocs(true);
+    setErrors(prev => ({ ...prev, doc: undefined }));
+    
+    // Only analyze the first front ID image
+    if (formData.idCardFront.length > 0) {
+        try {
+            const result = await aiService.analyzeDocument(formData.idCardFront[0]);
+            
+            if (!result.valid) {
+                // If AI fails to read, we don't block but warn (fallback to human review)
+                console.warn("OCR failed to read document");
+                setAnalyzingDocs(false);
+                return true; 
+            }
+
+            const cleanInputCPF = formData.cpf.replace(/\D/g, '');
+            const cleanDocCPF = result.cpf.replace(/\D/g, '');
+            
+            // Fuzzy name check
+            const inputNameParts = formData.name.toUpperCase().split(' ');
+            const docName = result.name.toUpperCase();
+            const nameMatch = inputNameParts.some(part => docName.includes(part) && part.length > 2);
+
+            if (cleanDocCPF && cleanInputCPF !== cleanDocCPF) {
+                const msg = `CPF do documento (${result.cpf}) não confere com o digitado.`;
+                setErrors(prev => ({ ...prev, doc: msg }));
+                addToast(msg, 'error');
+                setAnalyzingDocs(false);
+                return false;
+            }
+
+            if (!nameMatch && result.name.length > 5) {
+                 const msg = `Nome no documento (${result.name}) parece diferente do cadastro.`;
+                 // Warning only, don't block strictly for names due to OCR complexity
+                 addToast(msg, 'warning');
+            }
+
+        } catch (e) {
+            console.error("Validation error", e);
+        }
+    }
+    
+    setAnalyzingDocs(false);
+    return true;
+  };
+
   const validateBiometrics = async (): Promise<boolean> => {
     setVerifyingBiometrics(true);
     setErrors(prev => ({ ...prev, biometrics: undefined }));
@@ -174,6 +223,12 @@ export const Wizard: React.FC = () => {
            return;
         }
       }
+      
+      // 1. Analyze Document Data (OCR)
+      const docsValid = await validateDocuments();
+      if (!docsValid) return;
+
+      // 2. Validate Biometrics (Face Match)
       const bioValid = await validateBiometrics();
       if (!bioValid) return;
     }
@@ -277,11 +332,15 @@ export const Wizard: React.FC = () => {
         {/* Content Card */}
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
           
-          {verifyingBiometrics && (
+          {(verifyingBiometrics || analyzingDocs) && (
              <div className="absolute inset-0 bg-black/90 z-50 flex flex-col items-center justify-center text-center p-6 animate-in fade-in">
                 <div className="w-16 h-16 border-4 border-zinc-800 border-t-[#D4AF37] rounded-full animate-spin mb-6"></div>
-                <h3 className="text-xl font-bold text-white mb-2">Analisando Biometria</h3>
-                <p className="text-zinc-400 text-sm">Aguarde enquanto nossa IA valida sua identidade.</p>
+                <h3 className="text-xl font-bold text-white mb-2">
+                    {analyzingDocs ? 'Analisando Documento (OCR)...' : 'Analisando Biometria'}
+                </h3>
+                <p className="text-zinc-400 text-sm">
+                    {analyzingDocs ? 'Nossa IA está lendo seus dados.' : 'Aguarde enquanto nossa IA valida sua identidade.'}
+                </p>
              </div>
           )}
 
@@ -337,6 +396,13 @@ export const Wizard: React.FC = () => {
                 <div className="p-3 bg-red-900/20 border border-red-500/50 rounded-lg flex items-center gap-3 text-red-200 text-sm">
                   <AlertCircle size={18} className="text-red-500 shrink-0" />
                   {errors.biometrics}
+                </div>
+              )}
+              
+              {errors.doc && (
+                <div className="p-3 bg-red-900/20 border border-red-500/50 rounded-lg flex items-center gap-3 text-red-200 text-sm">
+                  <AlertCircle size={18} className="text-red-500 shrink-0" />
+                  {errors.doc}
                 </div>
               )}
 
@@ -406,14 +472,14 @@ export const Wizard: React.FC = () => {
         {/* Action Buttons */}
         <div className="fixed bottom-0 left-0 w-full p-4 bg-black/90 border-t border-zinc-900 flex gap-4 z-40 backdrop-blur-md">
            {currentStep > 1 && (
-             <Button onClick={handleBack} variant="secondary" className="flex-1" disabled={verifyingBiometrics}>
+             <Button onClick={handleBack} variant="secondary" className="flex-1" disabled={verifyingBiometrics || analyzingDocs}>
                 Voltar
              </Button>
            )}
            
            {currentStep < 4 ? (
-             <Button onClick={handleNext} className="flex-1" isLoading={verifyingBiometrics}>
-                {verifyingBiometrics ? 'Verificando...' : 'Continuar'}
+             <Button onClick={handleNext} className="flex-1" isLoading={verifyingBiometrics || analyzingDocs}>
+                {verifyingBiometrics || analyzingDocs ? 'Validando...' : 'Continuar'}
              </Button>
            ) : (
              <Button onClick={handleSubmit} className="flex-1" isLoading={loading} disabled={!isFormComplete}>

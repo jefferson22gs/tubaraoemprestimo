@@ -1,9 +1,16 @@
+
 const API_KEY = 'AIzaSyCvOjBiFTu-_oZ6vnJvXI9emGK50_G62i8';
 
 export interface AIResponse {
   intent: 'PAYMENT_PROMISE' | 'REQUEST_BOLETO' | 'SUPPORT' | 'UNKNOWN';
   date?: string;
   replyMessage: string;
+}
+
+export interface DocumentAnalysis {
+  name: string;
+  cpf: string;
+  valid: boolean;
 }
 
 export const aiService = {
@@ -60,6 +67,72 @@ export const aiService = {
     } catch (error) {
       console.error("AI Analysis failed, falling back to local logic:", error);
       return mockGeminiAnalysis(text);
+    }
+  },
+
+  /**
+   * Analyzes an ID Document (CNH/RG) image to extract CPF and Name.
+   */
+  analyzeDocument: async (imageBase64: string): Promise<DocumentAnalysis> => {
+    try {
+      console.log("Analyzing Document with Gemini Vision...");
+      
+      // Remove header from base64 if present
+      const base64Data = imageBase64.split(',')[1] || imageBase64;
+
+      const prompt = `
+        Analyze this image of an identification document (CNH or RG from Brazil).
+        Extract the full Name (Nome) and CPF number.
+        
+        Return ONLY a JSON object with this structure (no markdown):
+        {
+          "name": "STRING (Full extracted name, uppercase)",
+          "cpf": "STRING (Only numbers)"
+        }
+        If the image is not a document or text is unreadable, return empty strings.
+      `;
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: prompt },
+              {
+                inline_data: {
+                  mime_type: "image/jpeg",
+                  data: base64Data
+                }
+              }
+            ]
+          }]
+        })
+      });
+
+      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+      const data = await response.json();
+      
+      if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts) {
+        const rawText = data.candidates[0].content.parts[0].text;
+        const jsonString = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const result = JSON.parse(jsonString);
+        return {
+            name: result.name || '',
+            cpf: result.cpf || '',
+            valid: !!result.name && !!result.cpf
+        };
+      }
+
+      throw new Error("Invalid response from Gemini Vision");
+
+    } catch (error) {
+      console.error("OCR Failed:", error);
+      // Fallback for demo if API fails
+      return { name: '', cpf: '', valid: false };
     }
   },
 

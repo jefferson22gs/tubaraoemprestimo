@@ -12,6 +12,15 @@ export enum LoanStatus {
   DEFAULTED = 'DEFAULTED'
 }
 
+export interface UserAccess {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  password?: string;
+  createdAt: string;
+}
+
 export interface LoanPackage {
   id: string;
   name: string;

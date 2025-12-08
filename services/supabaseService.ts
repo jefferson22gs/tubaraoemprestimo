@@ -1,5 +1,5 @@
 
-import { LoanRequest, LoanStatus, LoanPackage, SystemSettings, Customer, CollectionRule, Loan, InteractionLog, Transaction, WhatsappConfig, BrandSettings } from '../types';
+import { LoanRequest, LoanStatus, LoanPackage, SystemSettings, Customer, CollectionRule, Loan, InteractionLog, Transaction, WhatsappConfig, BrandSettings, UserAccess, UserRole } from '../types';
 
 // --- STORAGE HELPERS ---
 const STORAGE_KEYS = {
@@ -12,7 +12,8 @@ const STORAGE_KEYS = {
   RULES: 'tubarao_rules',
   WA_CONFIG: 'tubarao_wa_config',
   USER: 'tubarao_user',
-  BRAND: 'tubarao_brand_config' // Nova chave
+  USERS_LIST: 'tubarao_users_list', // Key for user management
+  BRAND: 'tubarao_brand_config' 
 };
 
 const loadFromStorage = <T>(key: string, defaultValue: T): T => {
@@ -163,6 +164,23 @@ const DEFAULT_CUSTOMERS: Customer[] = [
   }
 ];
 
+const DEFAULT_USERS_LIST: UserAccess[] = [
+    {
+        id: 'admin_1',
+        name: 'Admin',
+        email: 'admin@tubarao.com',
+        role: UserRole.ADMIN,
+        createdAt: '2023-01-01T00:00:00Z'
+    },
+    {
+        id: 'client_1',
+        name: 'Marcos Vinícius',
+        email: 'marcos@client.com',
+        role: UserRole.CLIENT,
+        createdAt: '2023-01-15T00:00:00Z'
+    }
+];
+
 const DEFAULT_RULES: CollectionRule[] = [
   {
     id: 'rule_1',
@@ -269,6 +287,33 @@ export const supabaseService = {
     return false;
   },
 
+  // --- USER MANAGEMENT ---
+  getUsers: async (): Promise<UserAccess[]> => {
+    return loadFromStorage(STORAGE_KEYS.USERS_LIST, DEFAULT_USERS_LIST);
+  },
+
+  createUser: async (userData: any): Promise<boolean> => {
+    const users = loadFromStorage(STORAGE_KEYS.USERS_LIST, DEFAULT_USERS_LIST);
+    if (users.find((u: UserAccess) => u.email === userData.email)) return false;
+
+    users.push({
+        id: `user_${Date.now()}`,
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+        createdAt: new Date().toISOString()
+    });
+    saveToStorage(STORAGE_KEYS.USERS_LIST, users);
+    return true;
+  },
+
+  deleteUser: async (id: string): Promise<boolean> => {
+    let users = loadFromStorage(STORAGE_KEYS.USERS_LIST, DEFAULT_USERS_LIST);
+    users = users.filter((u: UserAccess) => u.id !== id);
+    saveToStorage(STORAGE_KEYS.USERS_LIST, users);
+    return true;
+  },
+
   // --- BRANDING METHODS ---
   getBrandSettings: async (): Promise<BrandSettings> => {
     return loadFromStorage(STORAGE_KEYS.BRAND, DEFAULT_BRAND_SETTINGS);
@@ -290,7 +335,7 @@ export const supabaseService = {
 
   savePackage: async (pkg: LoanPackage): Promise<boolean> => {
     const packages = loadFromStorage(STORAGE_KEYS.PACKAGES, DEFAULT_PACKAGES);
-    const index = packages.findIndex(p => p.id === pkg.id);
+    const index = packages.findIndex((p: LoanPackage) => p.id === pkg.id);
     if (index >= 0) {
       packages[index] = pkg;
     } else {
@@ -302,7 +347,7 @@ export const supabaseService = {
 
   deletePackage: async (id: string): Promise<boolean> => {
     let packages = loadFromStorage(STORAGE_KEYS.PACKAGES, DEFAULT_PACKAGES);
-    packages = packages.filter(p => p.id !== id);
+    packages = packages.filter((p: LoanPackage) => p.id !== id);
     saveToStorage(STORAGE_KEYS.PACKAGES, packages);
     return true;
   },
@@ -313,7 +358,7 @@ export const supabaseService = {
 
   getClientPendingRequest: async (): Promise<LoanRequest | null> => {
     const requests = loadFromStorage(STORAGE_KEYS.REQUESTS, DEFAULT_REQUESTS);
-    const pending = requests.find(r => r.status === LoanStatus.PENDING || r.status === LoanStatus.REJECTED);
+    const pending = requests.find((r: LoanRequest) => r.status === LoanStatus.PENDING || r.status === LoanStatus.REJECTED);
     return pending || null;
   },
 
@@ -346,7 +391,7 @@ export const supabaseService = {
     
     // Also create/update the customer record for CRM
     const customers = loadFromStorage(STORAGE_KEYS.CUSTOMERS, DEFAULT_CUSTOMERS);
-    if (!customers.find(c => c.cpf === data.cpf)) {
+    if (!customers.find((c: Customer) => c.cpf === data.cpf)) {
         customers.push({
             id: `cust_${Date.now()}`,
             name: data.name,
@@ -367,7 +412,7 @@ export const supabaseService = {
 
   updateRequestStatus: async (id: string, status: LoanStatus): Promise<boolean> => {
     const requests = loadFromStorage(STORAGE_KEYS.REQUESTS, DEFAULT_REQUESTS);
-    const req = requests.find(r => r.id === id);
+    const req = requests.find((r: LoanRequest) => r.id === id);
     if (req) {
         req.status = status;
         saveToStorage(STORAGE_KEYS.REQUESTS, requests);
@@ -377,7 +422,7 @@ export const supabaseService = {
 
   approveLoan: async (id: string): Promise<boolean> => {
     const requests = loadFromStorage(STORAGE_KEYS.REQUESTS, DEFAULT_REQUESTS);
-    const reqIndex = requests.findIndex(r => r.id === id);
+    const reqIndex = requests.findIndex((r: LoanRequest) => r.id === id);
     
     if (reqIndex >= 0) {
         const req = requests[reqIndex];
@@ -420,7 +465,7 @@ export const supabaseService = {
 
         // Update Customer stats
         const customers = loadFromStorage(STORAGE_KEYS.CUSTOMERS, DEFAULT_CUSTOMERS);
-        const customer = customers.find(c => c.cpf === req.cpf) || customers[0]; 
+        const customer = customers.find((c: Customer) => c.cpf === req.cpf) || customers[0]; 
         if (customer) {
             customer.activeLoansCount += 1;
             customer.totalDebt += req.amount * 1.3;
@@ -449,7 +494,7 @@ export const supabaseService = {
 
   toggleCustomerStatus: async (id: string, status: 'ACTIVE' | 'BLOCKED'): Promise<boolean> => {
     const customers = loadFromStorage(STORAGE_KEYS.CUSTOMERS, DEFAULT_CUSTOMERS);
-    const cust = customers.find(c => c.id === id);
+    const cust = customers.find((c: Customer) => c.id === id);
     if(cust) {
         cust.status = status;
         saveToStorage(STORAGE_KEYS.CUSTOMERS, customers);
@@ -463,7 +508,7 @@ export const supabaseService = {
 
   saveCollectionRule: async (rule: CollectionRule): Promise<boolean> => {
     const rules = loadFromStorage(STORAGE_KEYS.RULES, DEFAULT_RULES);
-    const index = rules.findIndex(r => r.id === rule.id);
+    const index = rules.findIndex((r: CollectionRule) => r.id === rule.id);
     if (index >= 0) {
       rules[index] = rule;
     } else {
@@ -475,7 +520,7 @@ export const supabaseService = {
 
   deleteCollectionRule: async (id: string): Promise<boolean> => {
     let rules = loadFromStorage(STORAGE_KEYS.RULES, DEFAULT_RULES);
-    rules = rules.filter(r => r.id !== id);
+    rules = rules.filter((r: CollectionRule) => r.id !== id);
     saveToStorage(STORAGE_KEYS.RULES, rules);
     return true;
   },
@@ -486,10 +531,10 @@ export const supabaseService = {
 
   uploadPaymentProof: async (loanId: string, installmentId: string, proofUrl: string): Promise<boolean> => {
     const loans = loadFromStorage(STORAGE_KEYS.LOANS, DEFAULT_LOANS);
-    const loan = loans.find(l => l.id === loanId);
+    const loan = loans.find((l: Loan) => l.id === loanId);
     
     if (loan) {
-        const inst = loan.installments.find(i => i.id === installmentId);
+        const inst = loan.installments.find((i: Installment) => i.id === installmentId);
         if (inst) {
             inst.status = 'PAID'; 
             inst.proofUrl = proofUrl;
