@@ -71,6 +71,12 @@ export interface BrandSettings {
   primaryColor: string;   // Cor de Ação (ex: Vermelho Tubarão)
   secondaryColor: string; // Cor de Destaque (ex: Dourado)
   backgroundColor: string; // Cor de Fundo (Geralmente preto ou escuro)
+  
+  // Company Info for Documents
+  companyName: string;
+  cnpj: string;
+  address: string;
+  phone: string;
 }
 
 // --- NEW TYPES FOR CRM & AUTOMATION ---

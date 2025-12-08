@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { X, CheckCircle2, Share2, Download } from 'lucide-react';
+import { X, CheckCircle2, Share2, Download, Building2, Phone } from 'lucide-react';
 import { Button } from './Button';
+import { useBrand } from '../contexts/BrandContext';
 
 interface ReceiptModalProps {
   data: {
@@ -14,11 +15,13 @@ interface ReceiptModalProps {
 }
 
 export const ReceiptModal: React.FC<ReceiptModalProps> = ({ data, onClose }) => {
+  const { settings } = useBrand();
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Comprovante Tubarão',
+          title: `Comprovante ${settings.systemName}`,
           text: `Comprovante de pagamento: R$ ${data.amount.toFixed(2)}`,
           url: window.location.href
         });
@@ -44,7 +47,13 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ data, onClose }) => 
             </div>
             
             <h2 className="text-center text-xl font-bold uppercase tracking-widest mb-1">RECIBO DE PAGAMENTO</h2>
-            <p className="text-center text-xs text-gray-500 mb-6">Tubarão Empréstimos S.A.</p>
+            
+            {/* Dynamic Company Info */}
+            <div className="text-center text-xs text-gray-500 mb-6 flex flex-col gap-1">
+                <p className="font-bold uppercase text-black">{settings.companyName}</p>
+                <p>CNPJ: {settings.cnpj}</p>
+                <p>{settings.address}</p>
+            </div>
 
             <div className="border-t-2 border-dashed border-gray-300 my-4"></div>
 
@@ -72,6 +81,11 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ data, onClose }) => 
             <div className="text-center space-y-1">
                 <p className="text-xs text-gray-500 uppercase">Autenticação</p>
                 <p className="text-[10px] break-all font-mono text-gray-400">{data.id.toUpperCase()}-{Date.now().toString(36).toUpperCase()}</p>
+            </div>
+            
+            {/* Support Info */}
+            <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-center gap-2 text-xs text-gray-400">
+                <Phone size={10} /> {settings.phone}
             </div>
         </div>
 

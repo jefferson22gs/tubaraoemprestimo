@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { UserPlus, Trash2, Search, Shield, User, Users as UsersIcon } from 'lucide-react';
 import { Button } from '../../components/Button';
@@ -17,7 +16,7 @@ export const Users: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: UserRole.CLIENT,
+    role: 'CLIENT' as UserRole,
     password: ''
   });
 
@@ -43,7 +42,7 @@ export const Users: React.FC = () => {
     if (success) {
         addToast("Usuário criado com sucesso!", 'success');
         setIsModalOpen(false);
-        setFormData({ name: '', email: '', role: UserRole.CLIENT, password: '' });
+        setFormData({ name: '', email: '', role: 'CLIENT', password: '' });
         loadUsers();
     } else {
         addToast("Erro ao criar usuário. Email pode já estar em uso.", 'error');
@@ -112,7 +111,7 @@ export const Users: React.FC = () => {
                   <tr key={user.id} className="hover:bg-zinc-800/50 transition-colors">
                     <td className="p-4">
                       <div className="font-bold text-white flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-black font-bold text-xs ${user.role === UserRole.ADMIN ? 'bg-[#D4AF37]' : 'bg-zinc-200'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-black font-bold text-xs ${user.role === 'ADMIN' ? 'bg-[#D4AF37]' : 'bg-zinc-200'}`}>
                           {user.name.substring(0,2).toUpperCase()}
                         </div>
                         {user.name}
@@ -121,11 +120,11 @@ export const Users: React.FC = () => {
                     <td className="p-4 text-zinc-300">{user.email}</td>
                     <td className="p-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                        user.role === UserRole.ADMIN 
+                        user.role === 'ADMIN' 
                             ? 'bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/50' 
                             : 'bg-blue-900/20 text-blue-400 border-blue-900/50'
                       }`}>
-                        {user.role === UserRole.ADMIN ? <span className="flex items-center gap-1"><Shield size={12}/> ADMINISTRADOR</span> : <span className="flex items-center gap-1"><User size={12}/> CLIENTE</span>}
+                        {user.role === 'ADMIN' ? <span className="flex items-center gap-1"><Shield size={12}/> ADMINISTRADOR</span> : <span className="flex items-center gap-1"><User size={12}/> CLIENTE</span>}
                       </span>
                     </td>
                     <td className="p-4">
@@ -191,14 +190,14 @@ export const Users: React.FC = () => {
                         <label className="block text-sm text-zinc-400 mb-1">Tipo de Acesso</label>
                         <div className="grid grid-cols-2 gap-2">
                             <button 
-                                onClick={() => setFormData({...formData, role: UserRole.CLIENT})}
-                                className={`p-3 rounded-lg border text-sm font-bold transition-all ${formData.role === UserRole.CLIENT ? 'bg-zinc-800 border-white text-white' : 'bg-black border-zinc-800 text-zinc-500'}`}
+                                onClick={() => setFormData({...formData, role: 'CLIENT'})}
+                                className={`p-3 rounded-lg border text-sm font-bold transition-all ${formData.role === 'CLIENT' ? 'bg-zinc-800 border-white text-white' : 'bg-black border-zinc-800 text-zinc-500'}`}
                             >
                                 Cliente
                             </button>
                             <button 
-                                onClick={() => setFormData({...formData, role: UserRole.ADMIN})}
-                                className={`p-3 rounded-lg border text-sm font-bold transition-all ${formData.role === UserRole.ADMIN ? 'bg-[#D4AF37]/20 border-[#D4AF37] text-[#D4AF37]' : 'bg-black border-zinc-800 text-zinc-500'}`}
+                                onClick={() => setFormData({...formData, role: 'ADMIN'})}
+                                className={`p-3 rounded-lg border text-sm font-bold transition-all ${formData.role === 'ADMIN' ? 'bg-[#D4AF37]/20 border-[#D4AF37] text-[#D4AF37]' : 'bg-black border-zinc-800 text-zinc-500'}`}
                             >
                                 Administrador
                             </button>

@@ -18,7 +18,11 @@ export const BrandProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     logoUrl: null,
     primaryColor: '#FF0000',
     secondaryColor: '#D4AF37',
-    backgroundColor: '#000000'
+    backgroundColor: '#000000',
+    companyName: 'Tubarão Empréstimos S.A.',
+    cnpj: '00.000.000/0001-00',
+    address: 'Av. Paulista, 1000 - SP',
+    phone: '(11) 99999-9999'
   });
   const [loading, setLoading] = useState(true);
 
@@ -29,8 +33,10 @@ export const BrandProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const loadBrand = async () => {
     try {
       const data = await supabaseService.getBrandSettings();
-      setSettings(data);
-      applyTheme(data);
+      // Ensure new fields exist even if loading old data
+      const mergedData = { ...settings, ...data };
+      setSettings(mergedData);
+      applyTheme(mergedData);
     } catch (e) {
       console.error("Failed to load brand settings", e);
     } finally {

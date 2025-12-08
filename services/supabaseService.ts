@@ -1,5 +1,5 @@
 
-import { LoanRequest, LoanStatus, LoanPackage, SystemSettings, Customer, CollectionRule, Loan, InteractionLog, Transaction, WhatsappConfig, BrandSettings, UserAccess, UserRole } from '../types';
+import { LoanRequest, LoanStatus, LoanPackage, SystemSettings, Customer, CollectionRule, Loan, InteractionLog, Transaction, WhatsappConfig, BrandSettings, UserAccess, UserRole, Installment } from '../types';
 
 // --- STORAGE HELPERS ---
 const STORAGE_KEYS = {
@@ -122,7 +122,11 @@ const DEFAULT_BRAND_SETTINGS: BrandSettings = {
   logoUrl: null, // null means use default SVG
   primaryColor: "#FF0000",
   secondaryColor: "#D4AF37",
-  backgroundColor: "#000000"
+  backgroundColor: "#000000",
+  companyName: "Tubarão Empréstimos S.A.",
+  cnpj: "00.000.000/0001-00",
+  address: "Av. Paulista, 1000 - São Paulo, SP",
+  phone: "(11) 99999-9999"
 };
 
 const DEFAULT_CUSTOMERS: Customer[] = [

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, Edit2, X, Percent, Zap, Smartphone, QrCode, CheckCircle2, RotateCcw, MessageSquare, Clock, Palette, Upload, Image as ImageIcon } from 'lucide-react';
+import { Save, Plus, Trash2, Edit2, X, Percent, Zap, Smartphone, QrCode, CheckCircle2, RotateCcw, MessageSquare, Clock, Palette, Upload, Image as ImageIcon, Building2 } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { supabaseService } from '../../services/supabaseService';
 import { whatsappService } from '../../services/whatsappService';
@@ -162,7 +162,7 @@ export const Settings: React.FC = () => {
 
   const handleSaveBrand = async () => {
     await updateBrand(localBrand);
-    addToast("Identidade visual atualizada com sucesso!", 'success');
+    addToast("Identidade visual e dados da empresa atualizados!", 'success');
   };
 
   const handleRestoreBrand = async () => {
@@ -309,13 +309,15 @@ export const Settings: React.FC = () => {
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 animate-in fade-in slide-in-from-bottom-2 space-y-8">
         <div>
             <h2 className="text-xl font-bold flex items-center gap-2 mb-2">
-                <Palette size={20} className="text-[#D4AF37]" /> Identidade Visual (White Label)
+                <Palette size={20} className="text-[#D4AF37]" /> Identidade Visual & Empresa
             </h2>
-            <p className="text-zinc-400 text-sm">Personalize o nome, cores e logo do sistema para sua marca.</p>
+            <p className="text-zinc-400 text-sm">Personalize o nome, cores, logo e dados legais da sua empresa.</p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8">
+            {/* Visual Settings */}
             <div className="space-y-6">
+                <h3 className="text-[#D4AF37] font-bold uppercase text-xs tracking-wider">Visual</h3>
                 <div>
                     <label className="block text-sm text-zinc-400 mb-2">Nome do Sistema</label>
                     <input 
@@ -328,7 +330,7 @@ export const Settings: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm text-zinc-400 mb-2">Cor Primária (Ação)</label>
+                        <label className="block text-sm text-zinc-400 mb-2">Cor Primária</label>
                         <div className="flex gap-2">
                             <input 
                                 type="color" 
@@ -344,7 +346,7 @@ export const Settings: React.FC = () => {
                         </div>
                     </div>
                     <div>
-                        <label className="block text-sm text-zinc-400 mb-2">Cor Secundária (Destaque)</label>
+                        <label className="block text-sm text-zinc-400 mb-2">Cor Secundária</label>
                         <div className="flex gap-2">
                             <input 
                                 type="color" 
@@ -360,29 +362,76 @@ export const Settings: React.FC = () => {
                         </div>
                     </div>
                 </div>
+
+                <div className="bg-black p-6 rounded-xl border border-zinc-800 flex flex-col items-center justify-center">
+                    <label className="block text-sm text-zinc-400 mb-4 text-center">Logotipo</label>
+                    
+                    <div className="relative group w-48 h-24 flex items-center justify-center border-2 border-dashed border-zinc-700 rounded-lg overflow-hidden bg-zinc-900/50 mb-4">
+                        {localBrand.logoUrl ? (
+                            <img src={localBrand.logoUrl} alt="Logo Preview" className="w-full h-full object-contain p-2" />
+                        ) : (
+                            <span className="text-zinc-600 text-xs">Logo Padrão</span>
+                        )}
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                            <Upload size={24} className="text-white" />
+                        </div>
+                        <input type="file" accept="image/*" onChange={handleLogoUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                    </div>
+
+                    <div className="flex gap-2">
+                        {localBrand.logoUrl && (
+                            <Button size="sm" variant="secondary" onClick={() => setLocalBrand({...localBrand, logoUrl: null})}>
+                                Remover
+                            </Button>
+                        )}
+                    </div>
+                </div>
             </div>
 
-            <div className="bg-black p-6 rounded-xl border border-zinc-800 flex flex-col items-center justify-center">
-                <label className="block text-sm text-zinc-400 mb-4 text-center">Logotipo</label>
+            {/* Company Info Settings */}
+            <div className="space-y-6">
+                <h3 className="text-[#D4AF37] font-bold uppercase text-xs tracking-wider flex items-center gap-2">
+                    <Building2 size={16} /> Dados da Empresa (Recibos/Contratos)
+                </h3>
                 
-                <div className="relative group w-48 h-24 flex items-center justify-center border-2 border-dashed border-zinc-700 rounded-lg overflow-hidden bg-zinc-900/50 mb-4">
-                    {localBrand.logoUrl ? (
-                        <img src={localBrand.logoUrl} alt="Logo Preview" className="w-full h-full object-contain p-2" />
-                    ) : (
-                        <span className="text-zinc-600 text-xs">Logo Padrão</span>
-                    )}
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                        <Upload size={24} className="text-white" />
-                    </div>
-                    <input type="file" accept="image/*" onChange={handleLogoUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                <div>
+                    <label className="block text-sm text-zinc-400 mb-2">Razão Social</label>
+                    <input 
+                        value={localBrand.companyName} 
+                        onChange={(e) => setLocalBrand({...localBrand, companyName: e.target.value})}
+                        className={inputStyle} 
+                        placeholder="Ex: Minha Empresa Ltda."
+                    />
                 </div>
 
-                <div className="flex gap-2">
-                    {localBrand.logoUrl && (
-                        <Button size="sm" variant="secondary" onClick={() => setLocalBrand({...localBrand, logoUrl: null})}>
-                            Remover
-                        </Button>
-                    )}
+                <div>
+                    <label className="block text-sm text-zinc-400 mb-2">CNPJ</label>
+                    <input 
+                        value={localBrand.cnpj} 
+                        onChange={(e) => setLocalBrand({...localBrand, cnpj: e.target.value})}
+                        className={inputStyle} 
+                        placeholder="00.000.000/0001-00"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm text-zinc-400 mb-2">Endereço Completo</label>
+                    <input 
+                        value={localBrand.address} 
+                        onChange={(e) => setLocalBrand({...localBrand, address: e.target.value})}
+                        className={inputStyle} 
+                        placeholder="Rua Exemplo, 123 - Cidade/UF"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm text-zinc-400 mb-2">Telefone de Contato</label>
+                    <input 
+                        value={localBrand.phone} 
+                        onChange={(e) => setLocalBrand({...localBrand, phone: e.target.value})}
+                        className={inputStyle} 
+                        placeholder="(11) 99999-9999"
+                    />
                 </div>
             </div>
         </div>
