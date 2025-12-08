@@ -1,3 +1,4 @@
+
 export enum UserRole {
   CLIENT = 'CLIENT',
   ADMIN = 'ADMIN'
@@ -40,6 +41,14 @@ export interface LoanRequest {
   installments: number;
   status: LoanStatus;
   date: string;
+  
+  // New References
+  references: {
+    fatherPhone: string;
+    motherPhone: string;
+    spousePhone: string;
+  };
+
   documents: {
     selfieUrl?: string;
     idCardUrl?: string | string[];
@@ -47,6 +56,11 @@ export interface LoanRequest {
     proofOfAddressUrl?: string | string[];
     proofIncomeUrl?: string | string[];
     vehicleUrl?: string | string[];
+    
+    // New Videos
+    videoSelfieUrl?: string;
+    videoHouseUrl?: string;
+    videoVehicleUrl?: string;
   };
   signatureUrl?: string;
 }

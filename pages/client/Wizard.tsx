@@ -1,12 +1,14 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronRight, ChevronLeft, Upload, User, MapPin, Camera as CameraIcon, PenTool, AlertCircle, FileText, Image as ImageIcon, Car, ScanFace, X, Plus, Loader2 } from 'lucide-react';
+import { Check, ChevronRight, ChevronLeft, Upload, User, MapPin, Camera as CameraIcon, PenTool, AlertCircle, FileText, Image as ImageIcon, Car, ScanFace, X, Plus, Loader2, Sparkles, Scan, Phone, Users, Video } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Camera } from '../../components/Camera';
 import { SignaturePad } from '../../components/SignaturePad';
+import { VideoUpload } from '../../components/VideoUpload';
 import { supabaseService } from '../../services/supabaseService';
 import { aiService } from '../../services/aiService';
+import { ocrService } from '../../services/ocrService';
 import { useToast } from '../../components/Toast';
 
 const steps = [
@@ -23,12 +25,19 @@ export const Wizard: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [verifyingBiometrics, setVerifyingBiometrics] = useState(false);
   const [analyzingDocs, setAnalyzingDocs] = useState(false);
+  const [scanningOCR, setScanningOCR] = useState(false); 
+  const [scannedImage, setScannedImage] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ cpf?: string; cep?: string; biometrics?: string; doc?: string }>({});
   const [showTerms, setShowTerms] = useState(false);
   
-  // State updated to hold arrays for files
+  // Approval Chance State
+  const [approvalChance, setApprovalChance] = useState(10);
+
   const [formData, setFormData] = useState({
     name: '', cpf: '', email: '', phone: '', birthDate: '',
+    // References
+    fatherPhone: '', motherPhone: '', spousePhone: '',
+    
     cep: '', address: '', number: '', income: '', occupation: '',
     selfie: '', 
     idCardFront: [] as string[], 
@@ -43,9 +52,42 @@ export const Wizard: React.FC = () => {
     vehicleBack: [] as string[],
     vehicleSide: [] as string[],
 
+    // Videos
+    videoSelfie: '',
+    videoHouse: '',
+    videoVehicle: '',
+
     signature: '', 
     termsAccepted: false
   });
+
+  // Effect to calculate probability
+  useEffect(() => {
+    let score = 10;
+    
+    // Step 1: Personal
+    if (formData.name && formData.cpf && formData.email) score += 5;
+    if (formData.fatherPhone && formData.motherPhone && formData.spousePhone) score += 15;
+
+    // Step 2: Address/Income
+    if (formData.address && formData.income) score += 10;
+
+    // Step 3: Docs
+    if (formData.selfie) score += 5;
+    if (formData.idCardFront.length > 0) score += 5;
+    if (formData.proofIncome.length > 0) score += 5;
+    
+    // Videos (High Value)
+    if (formData.videoSelfie) score += 15;
+    if (formData.videoHouse) score += 15;
+    if (formData.hasVehicle && formData.videoVehicle) score += 10;
+    else if (!formData.hasVehicle) score += 5; // Bonus for not needing extra verification
+
+    // Step 4: Sig
+    if (formData.signature) score += 5;
+
+    setApprovalChance(Math.min(98, score));
+  }, [formData]);
 
   // CPF Validation Helper
   const validateCPF = (cpf: string) => {
@@ -98,10 +140,60 @@ export const Wizard: React.FC = () => {
       else setErrors(prev => ({ ...prev, cep: undefined }));
     }
 
+    // Phone masking for references
+    if (['phone', 'fatherPhone', 'motherPhone', 'spousePhone'].includes(name)) {
+        let v = value.replace(/\D/g, '').slice(0, 11);
+        v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
+        v = v.replace(/(\d)(\d{4})$/, '$1-$2');
+        newValue = v;
+    }
+
     setFormData({ ...formData, [name]: newValue });
   };
 
-  // Multiple File Upload Handler
+  // Magic Fill / OCR Handler
+  const handleMagicFill = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+          const imageSrc = reader.result as string;
+          setScannedImage(imageSrc);
+          setScanningOCR(true); 
+          
+          try {
+              const result = await ocrService.scanDocument(imageSrc);
+              
+              if (result.success) {
+                  setFormData(prev => ({
+                      ...prev,
+                      name: result.name || prev.name,
+                      cpf: result.cpf || prev.cpf,
+                      birthDate: result.birthDate ? result.birthDate.split('/').reverse().join('-') : prev.birthDate,
+                      idCardFront: [imageSrc, ...prev.idCardFront] 
+                  }));
+
+                  let msg = "Leitura concluída!";
+                  if(result.name) msg += " Nome encontrado.";
+                  if(result.cpf) msg += " CPF encontrado.";
+                  addToast(msg, 'success');
+              } else {
+                  addToast("Não foi possível ler os dados. Tente uma foto mais clara.", 'warning');
+              }
+          } catch (error) {
+              console.error(error);
+              addToast("Erro ao processar imagem.", 'error');
+          } finally {
+              setTimeout(() => {
+                  setScanningOCR(false);
+                  setScannedImage(null);
+              }, 2000);
+          }
+      };
+      reader.readAsDataURL(file);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
     const files = e.target.files;
     if (files && files.length > 0) {
@@ -138,14 +230,12 @@ export const Wizard: React.FC = () => {
     setAnalyzingDocs(true);
     setErrors(prev => ({ ...prev, doc: undefined }));
     
-    // Only analyze the first front ID image
     if (formData.idCardFront.length > 0) {
         try {
             const result = await aiService.analyzeDocument(formData.idCardFront[0]);
             
             if (!result.valid) {
-                // If AI fails to read, we don't block but warn (fallback to human review)
-                console.warn("OCR failed to read document");
+                console.warn("AI OCR failed to read document");
                 setAnalyzingDocs(false);
                 return true; 
             }
@@ -153,7 +243,6 @@ export const Wizard: React.FC = () => {
             const cleanInputCPF = formData.cpf.replace(/\D/g, '');
             const cleanDocCPF = result.cpf.replace(/\D/g, '');
             
-            // Fuzzy name check
             const inputNameParts = formData.name.toUpperCase().split(' ');
             const docName = result.name.toUpperCase();
             const nameMatch = inputNameParts.some(part => docName.includes(part) && part.length > 2);
@@ -168,7 +257,6 @@ export const Wizard: React.FC = () => {
 
             if (!nameMatch && result.name.length > 5) {
                  const msg = `Nome no documento (${result.name}) parece diferente do cadastro.`;
-                 // Warning only, don't block strictly for names due to OCR complexity
                  addToast(msg, 'warning');
             }
 
@@ -186,7 +274,6 @@ export const Wizard: React.FC = () => {
     setErrors(prev => ({ ...prev, biometrics: undefined }));
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    // Mock Validation: Success if selfie exists and at least one ID photo exists
     const isMatch = formData.selfie.length > 100 && formData.idCardFront.length > 0;
     setVerifyingBiometrics(false);
 
@@ -202,7 +289,11 @@ export const Wizard: React.FC = () => {
   const handleNext = async () => {
     if (currentStep === 1) {
       if (errors.cpf || !formData.cpf || !formData.name || !formData.email) {
-        addToast("Preencha os dados obrigatórios.", 'warning');
+        addToast("Preencha os dados pessoais obrigatórios.", 'warning');
+        return;
+      }
+      if (!formData.fatherPhone || !formData.motherPhone || !formData.spousePhone) {
+        addToast("Todas as referências (Pai, Mãe, Cônjuge) são obrigatórias.", 'warning');
         return;
       }
     }
@@ -213,22 +304,31 @@ export const Wizard: React.FC = () => {
        }
     }
     if (currentStep === 3) {
+      // New validations for videos
       if (!formData.selfie || formData.idCardFront.length === 0 || formData.idCardBack.length === 0 || formData.proofAddress.length === 0) {
-        addToast("Selfie e Documentos (RG/Endereço) são obrigatórios.", 'warning');
+        addToast("Documentos básicos (Selfie, RG, Endereço) são obrigatórios.", 'warning');
         return;
       }
+      
+      if (!formData.videoSelfie || !formData.videoHouse) {
+          addToast("Vídeos da Selfie e da Casa são obrigatórios.", 'warning');
+          return;
+      }
+
       if (formData.hasVehicle) {
         if (formData.vehicleCRLV.length === 0 || formData.vehicleFront.length === 0) {
            addToast("Fotos do veículo são obrigatórias.", 'warning');
            return;
         }
+        if (!formData.videoVehicle) {
+           addToast("Vídeo do veículo é obrigatório.", 'warning');
+           return;
+        }
       }
       
-      // 1. Analyze Document Data (OCR)
       const docsValid = await validateDocuments();
       if (!docsValid) return;
 
-      // 2. Validate Biometrics (Face Match)
       const bioValid = await validateBiometrics();
       if (!bioValid) return;
     }
@@ -247,7 +347,6 @@ export const Wizard: React.FC = () => {
     navigate('/');
   };
 
-  // UI Component for Multiple Uploads with Preview
   const renderUploadArea = (name: string, label: string, files: string[]) => (
     <div className="space-y-3">
         <label className="text-sm text-zinc-400 font-medium block">{label}</label>
@@ -290,10 +389,38 @@ export const Wizard: React.FC = () => {
     formData.termsAccepted && 
     formData.signature && 
     formData.selfie && 
+    formData.videoSelfie &&
+    formData.videoHouse &&
     formData.idCardFront.length > 0;
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans pb-12">
+    <div className="min-h-screen bg-black text-white font-sans pb-32">
+      {/* OCR Scanner Overlay */}
+      {scanningOCR && (
+        <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center animate-in fade-in">
+             <div className="relative w-full max-w-sm aspect-[3/4] border-2 border-[#D4AF37] rounded-xl overflow-hidden shadow-[0_0_50px_rgba(212,175,55,0.3)] bg-black">
+                 {scannedImage && <img src={scannedImage} className="w-full h-full object-contain opacity-50" />}
+                 
+                 <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-green-500 to-transparent shadow-[0_0_20px_#22c55e] animate-[scan-vertical_2s_linear_infinite]"></div>
+                 
+                 <div className="absolute top-4 left-4 w-8 h-8 border-t-2 border-l-2 border-green-500"></div>
+                 <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-green-500"></div>
+                 <div className="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-green-500"></div>
+                 <div className="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-green-500"></div>
+
+                 <div className="absolute bottom-10 left-0 w-full text-center">
+                     <p className="text-green-500 font-mono text-sm animate-pulse">PROCESSANDO OCR...</p>
+                 </div>
+             </div>
+             <style>{`
+                @keyframes scan-vertical {
+                    0% { top: 0%; }
+                    100% { top: 100%; }
+                }
+             `}</style>
+        </div>
+      )}
+
       {/* Header Mobile */}
       <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-zinc-900 p-4 flex items-center justify-between">
          <div className="flex items-center gap-2" onClick={() => navigate('/')}>
@@ -305,9 +432,24 @@ export const Wizard: React.FC = () => {
 
       <div className="max-w-xl mx-auto px-4 pt-6">
         
+        {/* Dynamic Approval Gauge (Gamification) */}
+        <div className="mb-6 bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center justify-between shadow-lg">
+            <div>
+                <p className="text-xs text-zinc-500 uppercase tracking-wide font-bold">Chance de Aprovação</p>
+                <p className={`text-2xl font-bold ${approvalChance > 70 ? 'text-green-500' : approvalChance > 40 ? 'text-yellow-500' : 'text-red-500'}`}>
+                    {approvalChance}%
+                </p>
+            </div>
+            <div className="w-32 h-3 bg-zinc-800 rounded-full overflow-hidden border border-zinc-700">
+                <div 
+                    className={`h-full transition-all duration-1000 ease-out ${approvalChance > 70 ? 'bg-green-500' : approvalChance > 40 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                    style={{ width: `${approvalChance}%` }}
+                ></div>
+            </div>
+        </div>
+
         {/* Progress Steps */}
         <div className="flex justify-between mb-8 px-2 relative">
-           {/* Connecting Line */}
            <div className="absolute top-1/2 left-0 w-full h-0.5 bg-zinc-800 -z-10 -translate-y-1/2 rounded-full"></div>
            
            {steps.map((step) => {
@@ -329,24 +471,48 @@ export const Wizard: React.FC = () => {
           })}
         </div>
 
-        {/* Content Card */}
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
           
           {(verifyingBiometrics || analyzingDocs) && (
              <div className="absolute inset-0 bg-black/90 z-50 flex flex-col items-center justify-center text-center p-6 animate-in fade-in">
                 <div className="w-16 h-16 border-4 border-zinc-800 border-t-[#D4AF37] rounded-full animate-spin mb-6"></div>
                 <h3 className="text-xl font-bold text-white mb-2">
-                    {analyzingDocs ? 'Analisando Documento (OCR)...' : 'Analisando Biometria'}
+                    {analyzingDocs ? 'Validando Documento...' : 'Analisando Biometria'}
                 </h3>
                 <p className="text-zinc-400 text-sm">
-                    {analyzingDocs ? 'Nossa IA está lendo seus dados.' : 'Aguarde enquanto nossa IA valida sua identidade.'}
+                    {analyzingDocs ? 'Verificando autenticidade.' : 'Aguarde enquanto validamos sua identidade.'}
                 </p>
              </div>
           )}
 
           {currentStep === 1 && (
             <div className="space-y-5 animate-in slide-in-from-right fade-in duration-300">
-              <h2 className="text-xl font-bold text-white mb-2">Dados Pessoais</h2>
+              <div className="flex justify-between items-center mb-2">
+                 <h2 className="text-xl font-bold text-white">Dados Pessoais</h2>
+              </div>
+
+              {/* Magic Fill Button */}
+              <div className="relative mb-6">
+                 <input 
+                    type="file" 
+                    id="ocr-upload" 
+                    accept="image/*"
+                    onChange={handleMagicFill}
+                    className="hidden"
+                 />
+                 <label 
+                    htmlFor="ocr-upload"
+                    className="flex items-center justify-center gap-3 w-full p-4 bg-gradient-to-r from-[#D4AF37]/20 to-[#D4AF37]/5 border border-[#D4AF37] rounded-xl cursor-pointer hover:bg-[#D4AF37]/30 transition-all group"
+                 >
+                    <div className="p-2 bg-[#D4AF37] rounded-full text-black shadow-[0_0_15px_rgba(212,175,55,0.5)] group-hover:scale-110 transition-transform">
+                        <Scan size={20} />
+                    </div>
+                    <div className="text-left">
+                        <span className="block font-bold text-[#D4AF37] flex items-center gap-2"><Sparkles size={14}/> Preenchimento Mágico</span>
+                        <span className="text-xs text-zinc-400">Envie foto da CNH para preencher tudo.</span>
+                    </div>
+                 </label>
+              </div>
               
               <div className="space-y-4">
                 <Input label="Nome Completo" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Seu nome" />
@@ -364,6 +530,16 @@ export const Wizard: React.FC = () => {
 
                 <Input label="Email" type="email" name="email" value={formData.email} onChange={handleChange} placeholder="nome@email.com" />
                 <Input label="Data de Nascimento" type="date" name="birthDate" value={formData.birthDate} onChange={handleChange} />
+                <Input label="Seu Celular" name="phone" value={formData.phone} onChange={handleChange} placeholder="(00) 00000-0000" />
+              
+                <div className="pt-4 border-t border-zinc-800 space-y-4">
+                    <h3 className="font-bold text-[#D4AF37] flex items-center gap-2 text-sm uppercase tracking-wide">
+                        <Users size={16} /> Referências (Obrigatório)
+                    </h3>
+                    <Input label="Telefone do Pai" name="fatherPhone" value={formData.fatherPhone} onChange={handleChange} placeholder="(00) 00000-0000" />
+                    <Input label="Telefone da Mãe" name="motherPhone" value={formData.motherPhone} onChange={handleChange} placeholder="(00) 00000-0000" />
+                    <Input label="Telefone Cônjuge/Esposa" name="spousePhone" value={formData.spousePhone} onChange={handleChange} placeholder="(00) 00000-0000" />
+                </div>
               </div>
             </div>
           )}
@@ -390,7 +566,7 @@ export const Wizard: React.FC = () => {
 
           {currentStep === 3 && (
             <div className="space-y-6 animate-in slide-in-from-right fade-in duration-300">
-              <h2 className="text-xl font-bold text-white">Validação</h2>
+              <h2 className="text-xl font-bold text-white">Garantias & Vídeos</h2>
               
               {errors.biometrics && (
                 <div className="p-3 bg-red-900/20 border border-red-500/50 rounded-lg flex items-center gap-3 text-red-200 text-sm">
@@ -407,12 +583,36 @@ export const Wizard: React.FC = () => {
               )}
 
               <div className="space-y-6">
+                
+                {/* Selfie Photo */}
                 <div className="bg-black p-4 rounded-xl border border-zinc-800">
-                   <h3 className="font-semibold text-sm mb-3 flex items-center gap-2"><ScanFace className="text-[#D4AF37]" size={18}/> Selfie</h3>
+                   <h3 className="font-semibold text-sm mb-3 flex items-center gap-2"><ScanFace className="text-[#D4AF37]" size={18}/> Selfie (Foto)</h3>
                    <Camera 
                      label="Tirar Selfie" 
                      onCapture={(img) => setFormData({...formData, selfie: img})} 
                    />
+                </div>
+
+                {/* Videos Section */}
+                <div className="bg-black p-4 rounded-xl border border-zinc-800 space-y-4">
+                    <h3 className="font-semibold text-sm mb-1 flex items-center gap-2"><Video className="text-[#D4AF37]" size={18}/> Vídeos Obrigatórios</h3>
+                    <p className="text-xs text-zinc-500 mb-2">Grave vídeos curtos de 30 segundos para validação.</p>
+                    
+                    <VideoUpload 
+                        label="Vídeo do Usuário (Rosto)"
+                        subtitle="Fale seu nome e data de hoje."
+                        videoUrl={formData.videoSelfie}
+                        onUpload={(url) => setFormData({...formData, videoSelfie: url})}
+                        onRemove={() => setFormData({...formData, videoSelfie: ''})}
+                    />
+
+                    <VideoUpload 
+                        label="Vídeo da Casa"
+                        subtitle="Mostre a frente ou interior."
+                        videoUrl={formData.videoHouse}
+                        onUpload={(url) => setFormData({...formData, videoHouse: url})}
+                        onRemove={() => setFormData({...formData, videoHouse: ''})}
+                    />
                 </div>
 
                 <div className="space-y-6">
@@ -437,9 +637,20 @@ export const Wizard: React.FC = () => {
                    </label>
 
                    {formData.hasVehicle && (
-                      <div className="mt-4 grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
-                          {renderUploadArea('vehicleCRLV', 'Doc. (CRLV)', formData.vehicleCRLV)}
-                          {renderUploadArea('vehicleFront', 'Foto Frente', formData.vehicleFront)}
+                      <div className="mt-4 space-y-4 animate-in slide-in-from-top-2">
+                          <div className="bg-black p-4 rounded-xl border border-zinc-800">
+                             <VideoUpload 
+                                label="Vídeo do Carro"
+                                subtitle="Mostre o veículo e a placa."
+                                videoUrl={formData.videoVehicle}
+                                onUpload={(url) => setFormData({...formData, videoVehicle: url})}
+                                onRemove={() => setFormData({...formData, videoVehicle: ''})}
+                             />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            {renderUploadArea('vehicleCRLV', 'Doc. (CRLV)', formData.vehicleCRLV)}
+                            {renderUploadArea('vehicleFront', 'Foto Frente', formData.vehicleFront)}
+                          </div>
                       </div>
                    )}
                 </div>
@@ -501,9 +712,10 @@ export const Wizard: React.FC = () => {
                 <div className="p-6 overflow-y-auto text-sm text-zinc-300 space-y-4">
                     <p><strong>1. ACEITAÇÃO</strong><br/>Ao utilizar a plataforma Tubarão Empréstimos, você concorda com a coleta e processamento de seus dados para fins de análise de crédito.</p>
                     <p><strong>2. VERACIDADE</strong><br/>Você declara que todas as informações, documentos e biometria fornecidos são verdadeiros e autênticos, sob pena de responsabilidade civil e criminal.</p>
-                    <p><strong>3. CONSULTA</strong><br/>Autorizo a consulta de meu CPF em órgãos de proteção ao crédito (SPC/Serasa) e no Sistema de Informações de Crédito (SCR) do Banco Central.</p>
-                    <p><strong>4. BIOMETRIA</strong><br/>Consinto com a coleta da minha imagem facial (selfie) para fins de prevenção à fraude e validação de identidade (Liveness Check).</p>
-                    <p><strong>5. JUROS E MULTAS</strong><br/>Estou ciente das taxas de juros aplicadas e que o atraso no pagamento acarretará multas e juros moratórios conforme contrato.</p>
+                    <p><strong>3. VÍDEOS E REFERÊNCIAS</strong><br/>Autorizo o uso dos vídeos enviados (casa, veículo, rosto) para validação cadastral e contato com as referências fornecidas (pai, mãe, cônjuge) em caso de necessidade.</p>
+                    <p><strong>4. CONSULTA</strong><br/>Autorizo a consulta de meu CPF em órgãos de proteção ao crédito (SPC/Serasa) e no Sistema de Informações de Crédito (SCR) do Banco Central.</p>
+                    <p><strong>5. BIOMETRIA</strong><br/>Consinto com a coleta da minha imagem facial (selfie) para fins de prevenção à fraude e validação de identidade (Liveness Check).</p>
+                    <p><strong>6. JUROS E MULTAS</strong><br/>Estou ciente das taxas de juros aplicadas e que o atraso no pagamento acarretará multas e juros moratórios conforme contrato.</p>
                 </div>
                 <div className="p-6 border-t border-zinc-800 bg-black/50 rounded-b-2xl">
                     <Button onClick={() => { setFormData({...formData, termsAccepted: true}); setShowTerms(false); }} className="w-full">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 
 // Pages
 import { Home } from './pages/client/Home';
@@ -9,6 +9,7 @@ import { ClientDashboard } from './pages/client/ClientDashboard';
 import { Contracts } from './pages/client/Contracts';
 import { Profile } from './pages/client/Profile';
 import { Statement } from './pages/client/Statement';
+import { HelpCenter } from './pages/client/HelpCenter';
 import { Dashboard } from './pages/admin/Dashboard';
 import { Requests } from './pages/admin/Requests';
 import { Settings } from './pages/admin/Settings';
@@ -33,11 +34,11 @@ import { BrandProvider, useBrand } from './contexts/BrandContext';
 
 const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const isActive = (path: string) => location.pathname === path ? 'text-[#D4AF37] bg-zinc-800' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50';
   const user = supabaseService.auth.getUser();
-  const { settings } = useBrand();
 
   if (!user || user.role !== 'ADMIN') {
     return <Navigate to="/login" replace />;
@@ -100,11 +101,11 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 const ClientLayout: React.FC<{ children: React.ReactNode; showNav?: boolean; showBottomNav?: boolean }> = ({ children, showNav = true, showBottomNav = false }) => {
   const user = supabaseService.auth.getUser();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isClientMenuOpen, setIsClientMenuOpen] = useState(false);
   
   const isDemoMode = location.pathname.includes('/demo');
   const isPublicRoute = ['/', '/wizard', '/login', '/demo'].includes(location.pathname);
-  const { settings } = useBrand();
 
   const isActive = (path: string) => location.pathname === path ? 'text-[#D4AF37] bg-zinc-800' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50';
 
@@ -229,6 +230,7 @@ export default function App() {
             <Route path="/client/contracts" element={<ClientLayout showNav={true} showBottomNav={true}><Contracts /></ClientLayout>} />
             <Route path="/client/profile" element={<ClientLayout showNav={true} showBottomNav={true}><Profile /></ClientLayout>} />
             <Route path="/client/statement" element={<ClientLayout showNav={true} showBottomNav={true}><Statement /></ClientLayout>} />
+            <Route path="/client/help" element={<ClientLayout showNav={true} showBottomNav={true}><HelpCenter /></ClientLayout>} />
             
             {/* Admin */}
             <Route path="/admin" element={<AdminLayout><Dashboard /></AdminLayout>} />

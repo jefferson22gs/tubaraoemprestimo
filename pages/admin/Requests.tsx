@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Check, X, Eye, Maximize, Layers, Download, Filter } from 'lucide-react';
+import { Check, X, Eye, Maximize, Layers, Download, Filter, Video, Users, Phone } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { supabaseService } from '../../services/supabaseService';
 import { LoanRequest, LoanStatus } from '../../types';
@@ -188,6 +188,59 @@ export const Requests: React.FC = () => {
                 <InfoBox label="Condição" value={`${selectedRequest.installments}x de R$ ${(selectedRequest.amount / selectedRequest.installments * 1.05).toLocaleString('pt-BR', {maximumFractionDigits: 2})}`} />
               </div>
 
+              {/* References Section */}
+              {selectedRequest.references && (
+                  <div className="bg-zinc-950 border border-zinc-800 p-4 rounded-xl">
+                      <h3 className="text-[#D4AF37] font-bold text-sm uppercase tracking-wider mb-4 flex items-center gap-2">
+                          <Users size={16} /> Referências Pessoais
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="flex items-center gap-2 bg-black p-3 rounded-lg border border-zinc-800">
+                              <Phone size={16} className="text-zinc-500" />
+                              <div>
+                                  <p className="text-xs text-zinc-500 uppercase">Pai</p>
+                                  <p className="font-bold text-white">{selectedRequest.references.fatherPhone || 'N/A'}</p>
+                              </div>
+                          </div>
+                          <div className="flex items-center gap-2 bg-black p-3 rounded-lg border border-zinc-800">
+                              <Phone size={16} className="text-zinc-500" />
+                              <div>
+                                  <p className="text-xs text-zinc-500 uppercase">Mãe</p>
+                                  <p className="font-bold text-white">{selectedRequest.references.motherPhone || 'N/A'}</p>
+                              </div>
+                          </div>
+                          <div className="flex items-center gap-2 bg-black p-3 rounded-lg border border-zinc-800">
+                              <Phone size={16} className="text-zinc-500" />
+                              <div>
+                                  <p className="text-xs text-zinc-500 uppercase">Cônjuge</p>
+                                  <p className="font-bold text-white">{selectedRequest.references.spousePhone || 'N/A'}</p>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              )}
+
+              {/* Video Gallery */}
+              <div className="space-y-4">
+                  <h3 className="text-[#D4AF37] font-bold text-sm uppercase tracking-wider border-b border-zinc-800 pb-2 mb-4 flex items-center gap-2">
+                      <Video size={16} /> Validação por Vídeo
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {selectedRequest.documents.videoSelfieUrl && (
+                          <VideoCard title="Vídeo do Usuário" url={selectedRequest.documents.videoSelfieUrl} />
+                      )}
+                      {selectedRequest.documents.videoHouseUrl && (
+                          <VideoCard title="Vídeo da Casa" url={selectedRequest.documents.videoHouseUrl} />
+                      )}
+                      {selectedRequest.documents.videoVehicleUrl && (
+                          <VideoCard title="Vídeo do Veículo" url={selectedRequest.documents.videoVehicleUrl} />
+                      )}
+                      {!selectedRequest.documents.videoSelfieUrl && (
+                          <div className="text-zinc-500 italic text-sm p-4">Nenhum vídeo anexado.</div>
+                      )}
+                  </div>
+              </div>
+
               {/* Document Gallery */}
               <div className="space-y-6">
                 
@@ -290,6 +343,15 @@ const InfoBox = ({ label, value, highlight }: any) => (
     <div className={`p-4 rounded-xl border ${highlight ? 'bg-zinc-800 border-[#D4AF37]/50' : 'bg-black border-zinc-800'}`}>
         <p className="text-xs text-zinc-500 mb-1 uppercase tracking-wide">{label}</p>
         <p className={`font-bold truncate ${highlight ? 'text-[#D4AF37] text-lg' : 'text-white'}`}>{value}</p>
+    </div>
+);
+
+const VideoCard = ({ title, url }: { title: string, url: string }) => (
+    <div className="space-y-2 group">
+        <p className="text-xs text-zinc-400 pl-1">{title}</p>
+        <div className="rounded-xl border border-zinc-800 bg-black overflow-hidden relative aspect-video">
+            <video src={url} controls className="w-full h-full object-contain" />
+        </div>
     </div>
 );
 

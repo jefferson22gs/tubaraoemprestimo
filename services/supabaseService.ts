@@ -1,3 +1,4 @@
+
 import { LoanRequest, LoanStatus, LoanPackage, SystemSettings, Customer, CollectionRule, Loan, InteractionLog, Transaction, WhatsappConfig, BrandSettings, UserAccess, UserRole, Installment, Campaign } from '../types';
 
 const STORAGE_KEYS = {
@@ -168,13 +169,23 @@ export const supabaseService = {
           installments: 12,
           status: LoanStatus.PENDING,
           date: new Date().toISOString(),
+          // New fields
+          references: {
+             fatherPhone: data.fatherPhone,
+             motherPhone: data.motherPhone,
+             spousePhone: data.spousePhone
+          },
           documents: {
               selfieUrl: data.selfie,
               idCardUrl: data.idCardFront,
               idCardBackUrl: data.idCardBack,
               proofOfAddressUrl: data.proofAddress,
               proofIncomeUrl: data.proofIncome,
-              vehicleUrl: data.vehicleFront
+              vehicleUrl: data.vehicleFront,
+              // Videos
+              videoSelfieUrl: data.videoSelfie,
+              videoHouseUrl: data.videoHouse,
+              videoVehicleUrl: data.videoVehicle
           },
           signatureUrl: data.signature
       });
