@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, ArrowRight, ShieldCheck, ScanFace, AlertCircle } from 'lucide-react';
+import { User, Lock, ArrowRight, ShieldCheck, ScanFace, AlertCircle, Smartphone } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Logo } from '../../components/Logo';
 import { supabaseService } from '../../services/supabaseService';
@@ -170,10 +171,17 @@ export const Login: React.FC = () => {
           </Button>
         </form>
         
-        <div className="mt-8 text-center">
+        <div className="mt-8 text-center flex flex-col gap-4">
           <p className="text-zinc-500 text-sm">
             Não tem uma conta? <button onClick={() => navigate('/wizard')} className="text-gold hover:text-white transition-colors font-semibold">Cadastre-se</button>
           </p>
+          
+          <button 
+            onClick={() => navigate('/demo')} 
+            className="text-xs text-zinc-600 hover:text-[#D4AF37] transition-colors flex items-center justify-center gap-2"
+          >
+            <Smartphone size={14} /> Modo Apresentação (Demo)
+          </button>
         </div>
       </div>
       

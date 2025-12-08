@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 
@@ -15,6 +14,8 @@ import { Requests } from './pages/admin/Requests';
 import { Settings } from './pages/admin/Settings';
 import { Customers } from './pages/admin/Customers';
 import { Interactions } from './pages/admin/Interactions';
+import { Users as UsersPage } from './pages/admin/Users';
+import { DemoSimulator } from './pages/public/DemoSimulator';
 
 // Components
 import { Chatbot } from './components/Chatbot';
@@ -22,10 +23,10 @@ import { BottomNav } from './components/BottomNav';
 import { SplashScreen } from './components/SplashScreen';
 import { InstallPrompt } from './components/InstallPrompt';
 import { ToastProvider } from './components/Toast';
-import { LayoutDashboard, FileText, Settings as SettingsIcon, LogOut, Users, Bot, Menu, X } from 'lucide-react';
+import { LayoutDashboard, FileText, Settings as SettingsIcon, LogOut, Users, Bot, Menu, X, UserCog, Home as HomeIcon, PieChart, User as UserIcon } from 'lucide-react';
 import { Logo } from './components/Logo';
 import { supabaseService } from './services/supabaseService';
-import { BrandProvider, useBrand } from './contexts/BrandContext'; // Import Context
+import { BrandProvider, useBrand } from './contexts/BrandContext';
 
 // --- Layouts ---
 
@@ -35,25 +36,26 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   
   const isActive = (path: string) => location.pathname === path ? 'text-[#D4AF37] bg-zinc-800' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50';
   const user = supabaseService.auth.getUser();
-  const { settings } = useBrand(); // Use Brand Name
+  const { settings } = useBrand();
 
   if (!user || user.role !== 'ADMIN') {
-      return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   const NavContent = () => (
     <>
-      <div className="p-6 border-b border-zinc-800 flex justify-center">
+      <div className="p-6 border-b border-zinc-800 flex justify-center shrink-0">
         <Logo size="sm" />
       </div>
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin')}`}><LayoutDashboard size={20} /> Dashboard</Link>
         <Link to="/admin/requests" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/requests')}`}><FileText size={20} /> Solicitações</Link>
         <Link to="/admin/customers" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/customers')}`}><Users size={20} /> Clientes</Link>
+        <Link to="/admin/users" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/users')}`}><UserCog size={20} /> Acessos</Link>
         <Link to="/admin/interactions" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/interactions')}`}><Bot size={20} /> IA Logs</Link>
         <Link to="/admin/settings" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/settings')}`}><SettingsIcon size={20} /> Configurações</Link>
       </nav>
-      <div className="p-4 border-t border-zinc-800">
+      <div className="p-4 border-t border-zinc-800 shrink-0">
         <Link to="/login" className="flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-900/10 rounded-lg transition-all"><LogOut size={20} /> Sair</Link>
       </div>
     </>
@@ -63,12 +65,12 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     <div className="flex h-screen bg-black text-white overflow-hidden font-sans">
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 w-full z-50 bg-zinc-950 border-b border-zinc-800 p-4 flex justify-between items-center">
-         <div className="flex items-center gap-2">
-            <span className="font-bold text-[#D4AF37] tracking-wider text-sm">ADMIN PANEL</span>
-         </div>
-         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-zinc-400 hover:text-white">
-            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-         </button>
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-[#D4AF37] tracking-wider text-sm">ADMIN PANEL</span>
+        </div>
+        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-zinc-400 hover:text-white">
+          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
       </div>
 
       {/* Desktop Sidebar */}
@@ -79,9 +81,9 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       {/* Mobile Sidebar (Drawer) */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-40 bg-black/80 md:hidden backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}>
-           <aside className="w-64 h-full bg-zinc-950 border-r border-zinc-800 flex flex-col pt-16 animate-in slide-in-from-left duration-200" onClick={e => e.stopPropagation()}>
-              <NavContent />
-           </aside>
+          <aside className="w-64 h-full bg-zinc-950 border-r border-zinc-800 flex flex-col pt-16 animate-in slide-in-from-left duration-200" onClick={e => e.stopPropagation()}>
+            <NavContent />
+          </aside>
         </div>
       )}
 
@@ -95,35 +97,99 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 const ClientLayout: React.FC<{ children: React.ReactNode; showNav?: boolean; showBottomNav?: boolean }> = ({ children, showNav = true, showBottomNav = false }) => {
   const user = supabaseService.auth.getUser();
-  const isPublicRoute = useLocation().pathname === '/' || useLocation().pathname === '/wizard';
+  const location = useLocation();
+  const [isClientMenuOpen, setIsClientMenuOpen] = useState(false);
+  
+  const isDemoMode = location.pathname.includes('/demo');
+  const isPublicRoute = ['/', '/wizard', '/login', '/demo'].includes(location.pathname);
   const { settings } = useBrand();
 
-  if (!isPublicRoute && (!user || user.role !== 'CLIENT')) {
-     return <Navigate to="/login" replace />;
+  const isActive = (path: string) => location.pathname === path ? 'text-[#D4AF37] bg-zinc-800' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50';
+
+  if (!isPublicRoute && !isDemoMode && (!user || user.role !== 'CLIENT')) {
+    return <Navigate to="/login" replace />;
   }
+
+  const ClientNavContent = () => (
+    <>
+      <div className="p-6 border-b border-zinc-800 flex justify-center shrink-0">
+        <Logo size="sm" />
+      </div>
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+        <Link to="/" onClick={() => setIsClientMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/')}`}>
+          <HomeIcon size={20} /> Início
+        </Link>
+        {user && (
+          <>
+            <Link to="/client/dashboard" onClick={() => setIsClientMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/client/dashboard')}`}>
+              <LayoutDashboard size={20} /> Minha Conta
+            </Link>
+            <Link to="/client/contracts" onClick={() => setIsClientMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/client/contracts')}`}>
+              <FileText size={20} /> Meus Contratos
+            </Link>
+            <Link to="/client/statement" onClick={() => setIsClientMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/client/statement')}`}>
+              <PieChart size={20} /> Extrato
+            </Link>
+            <Link to="/client/profile" onClick={() => setIsClientMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/client/profile')}`}>
+              <UserIcon size={20} /> Meu Perfil
+            </Link>
+          </>
+        )}
+        {!user && (
+          <Link to="/login" onClick={() => setIsClientMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/login')}`}>
+            <LogOut size={20} /> Entrar
+          </Link>
+        )}
+      </nav>
+      {user && (
+        <div className="p-4 border-t border-zinc-800 shrink-0">
+          <Link to="/login" className="flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-900/10 rounded-lg transition-all">
+            <LogOut size={20} /> Sair
+          </Link>
+        </div>
+      )}
+    </>
+  );
 
   return (
     <div className="bg-black min-h-screen text-white font-sans selection:bg-[#FF0000] selection:text-white pb-safe">
+      {/* Mobile Sidebar (Drawer) for Client */}
+      {isClientMenuOpen && (
+        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm" onClick={() => setIsClientMenuOpen(false)}>
+          <aside className="w-64 h-full bg-zinc-950 border-r border-zinc-800 flex flex-col animate-in slide-in-from-left duration-200" onClick={e => e.stopPropagation()}>
+            <ClientNavContent />
+          </aside>
+        </div>
+      )}
+
       {showNav && (
         <nav className="fixed top-0 w-full z-40 bg-black/80 backdrop-blur-md border-b border-zinc-800">
           <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-            <Link to="/"><Logo size="sm" /></Link>
+            <div className="flex items-center gap-4">
+              {/* Hamburger Menu Trigger */}
+              <button onClick={() => setIsClientMenuOpen(true)} className="md:hidden text-zinc-400 hover:text-white p-1">
+                <Menu size={24} />
+              </button>
+              <Link to="/"><Logo size="sm" /></Link>
+            </div>
+            
             <div className="flex items-center gap-4">
               {user ? (
-                 <div className="flex items-center gap-3">
-                    <span className="text-sm text-zinc-400 hidden md:block">Olá, {user.name.split(' ')[0]}</span>
-                    <Link to="/client/profile" className="w-8 h-8 rounded-full bg-[#D4AF37] flex items-center justify-center text-black font-bold text-xs">{user.name.substring(0,2).toUpperCase()}</Link>
-                 </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-zinc-400 hidden md:block">Olá, {user.name.split(' ')[0]}</span>
+                  <Link to="/client/profile" className="w-8 h-8 rounded-full bg-[#D4AF37] flex items-center justify-center text-black font-bold text-xs">{user.name.substring(0,2).toUpperCase()}</Link>
+                </div>
               ) : (
-                 <>
-                    <Link to="/login" className="text-sm font-semibold text-zinc-400 hover:text-white transition-colors">Entrar</Link>
-                    <Link to="/wizard" className="bg-[#FF0000] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-900/20">Simular</Link>
-                 </>
+                <>
+                  <Link to="/login" className="text-sm font-semibold text-zinc-400 hover:text-white transition-colors hidden md:block">Entrar</Link>
+                  <Link to="/wizard" className="bg-[#FF0000] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-900/20">Simular</Link>
+                </>
               )}
             </div>
           </div>
         </nav>
       )}
+      
       <div className={showNav ? 'pt-16' : ''}>{children}</div>
       {showBottomNav && <BottomNav />}
       <Chatbot />
@@ -131,44 +197,47 @@ const ClientLayout: React.FC<{ children: React.ReactNode; showNav?: boolean; sho
   );
 };
 
-// Main App Component with BrandProvider Wrapper
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
 
   if (showSplash) {
     return (
-        <BrandProvider>
-            <SplashScreen onFinish={() => setShowSplash(false)} />
-        </BrandProvider>
+      <BrandProvider>
+        <SplashScreen onFinish={() => setShowSplash(false)} />
+      </BrandProvider>
     );
   }
 
   return (
     <BrandProvider>
-        <ToastProvider>
+      <ToastProvider>
         <Router>
-            <InstallPrompt />
-            <Routes>
+          <InstallPrompt />
+          <Routes>
             {/* Public */}
             <Route path="/" element={<ClientLayout><Home /></ClientLayout>} />
             <Route path="/login" element={<Login />} />
             <Route path="/wizard" element={<ClientLayout><Wizard /></ClientLayout>} />
             
+            {/* Demo Simulator */}
+            <Route path="/demo" element={<DemoSimulator />} />
+            
             {/* Client */}
-            <Route path="/client/dashboard" element={<ClientLayout showNav={false} showBottomNav={true}><ClientDashboard /></ClientLayout>} />
-            <Route path="/client/contracts" element={<ClientLayout showNav={false} showBottomNav={true}><Contracts /></ClientLayout>} />
-            <Route path="/client/profile" element={<ClientLayout showNav={false} showBottomNav={true}><Profile /></ClientLayout>} />
-            <Route path="/client/statement" element={<ClientLayout showNav={false} showBottomNav={true}><Statement /></ClientLayout>} />
+            <Route path="/client/dashboard" element={<ClientLayout showNav={true} showBottomNav={true}><ClientDashboard /></ClientLayout>} />
+            <Route path="/client/contracts" element={<ClientLayout showNav={true} showBottomNav={true}><Contracts /></ClientLayout>} />
+            <Route path="/client/profile" element={<ClientLayout showNav={true} showBottomNav={true}><Profile /></ClientLayout>} />
+            <Route path="/client/statement" element={<ClientLayout showNav={true} showBottomNav={true}><Statement /></ClientLayout>} />
             
             {/* Admin */}
             <Route path="/admin" element={<AdminLayout><Dashboard /></AdminLayout>} />
             <Route path="/admin/requests" element={<AdminLayout><Requests /></AdminLayout>} />
             <Route path="/admin/customers" element={<AdminLayout><Customers /></AdminLayout>} />
+            <Route path="/admin/users" element={<AdminLayout><UsersPage /></AdminLayout>} />
             <Route path="/admin/interactions" element={<AdminLayout><Interactions /></AdminLayout>} />
             <Route path="/admin/settings" element={<AdminLayout><Settings /></AdminLayout>} />
-            </Routes>
+          </Routes>
         </Router>
-        </ToastProvider>
+      </ToastProvider>
     </BrandProvider>
   );
 }
