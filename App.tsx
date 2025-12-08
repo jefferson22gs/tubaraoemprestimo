@@ -15,6 +15,7 @@ import { Settings } from './pages/admin/Settings';
 import { Customers } from './pages/admin/Customers';
 import { Interactions } from './pages/admin/Interactions';
 import { Users as UsersPage } from './pages/admin/Users';
+import { Marketing } from './pages/admin/Marketing';
 import { DemoSimulator } from './pages/public/DemoSimulator';
 
 // Components
@@ -23,7 +24,7 @@ import { BottomNav } from './components/BottomNav';
 import { SplashScreen } from './components/SplashScreen';
 import { InstallPrompt } from './components/InstallPrompt';
 import { ToastProvider } from './components/Toast';
-import { LayoutDashboard, FileText, Settings as SettingsIcon, LogOut, Users, Bot, Menu, X, UserCog, Home as HomeIcon, PieChart, User as UserIcon } from 'lucide-react';
+import { LayoutDashboard, FileText, Settings as SettingsIcon, LogOut, Users, Bot, Menu, X, UserCog, Home as HomeIcon, PieChart, User as UserIcon, Megaphone } from 'lucide-react';
 import { Logo } from './components/Logo';
 import { supabaseService } from './services/supabaseService';
 import { BrandProvider, useBrand } from './contexts/BrandContext';
@@ -51,6 +52,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin')}`}><LayoutDashboard size={20} /> Dashboard</Link>
         <Link to="/admin/requests" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/requests')}`}><FileText size={20} /> Solicitações</Link>
         <Link to="/admin/customers" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/customers')}`}><Users size={20} /> Clientes</Link>
+        <Link to="/admin/marketing" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/marketing')}`}><Megaphone size={20} /> Marketing</Link>
         <Link to="/admin/users" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/users')}`}><UserCog size={20} /> Acessos</Link>
         <Link to="/admin/interactions" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/interactions')}`}><Bot size={20} /> IA Logs</Link>
         <Link to="/admin/settings" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/settings')}`}><SettingsIcon size={20} /> Configurações</Link>
@@ -232,6 +234,7 @@ export default function App() {
             <Route path="/admin" element={<AdminLayout><Dashboard /></AdminLayout>} />
             <Route path="/admin/requests" element={<AdminLayout><Requests /></AdminLayout>} />
             <Route path="/admin/customers" element={<AdminLayout><Customers /></AdminLayout>} />
+            <Route path="/admin/marketing" element={<AdminLayout><Marketing /></AdminLayout>} />
             <Route path="/admin/users" element={<AdminLayout><UsersPage /></AdminLayout>} />
             <Route path="/admin/interactions" element={<AdminLayout><Interactions /></AdminLayout>} />
             <Route path="/admin/settings" element={<AdminLayout><Settings /></AdminLayout>} />

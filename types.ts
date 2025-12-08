@@ -1,4 +1,3 @@
-
 export enum UserRole {
   CLIENT = 'CLIENT',
   ADMIN = 'ADMIN'
@@ -67,19 +66,17 @@ export interface SystemSettings {
 // --- BRANDING / WHITE LABEL ---
 export interface BrandSettings {
   systemName: string;
-  logoUrl: string | null; // null usa o logo padrão (Tubarão)
-  primaryColor: string;   // Cor de Ação (ex: Vermelho Tubarão)
-  secondaryColor: string; // Cor de Destaque (ex: Dourado)
-  backgroundColor: string; // Cor de Fundo (Geralmente preto ou escuro)
+  logoUrl: string | null;
+  primaryColor: string;
+  secondaryColor: string;
+  backgroundColor: string;
   
-  // Company Info for Documents
+  // Company Info
   companyName: string;
   cnpj: string;
   address: string;
   phone: string;
 }
-
-// --- NEW TYPES FOR CRM & AUTOMATION ---
 
 export interface Customer {
   id: string;
@@ -88,7 +85,7 @@ export interface Customer {
   email: string;
   phone: string;
   status: 'ACTIVE' | 'BLOCKED';
-  internalScore: number; // 0-1000
+  internalScore: number;
   totalDebt: number;
   activeLoansCount: number;
   joinedAt: string;
@@ -148,4 +145,17 @@ export interface WhatsappConfig {
   apiKey: string;
   instanceName: string;
   isConnected: boolean;
+}
+
+export interface Campaign {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl?: string;
+  link?: string;
+  startDate: string;
+  endDate: string;
+  frequency: 'ONCE' | 'DAILY' | 'ALWAYS';
+  active: boolean;
+  priority: number; // Higher shows first
 }

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabaseService } from '../services/supabaseService';
 import { BrandSettings } from '../types';
@@ -33,7 +32,6 @@ export const BrandProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const loadBrand = async () => {
     try {
       const data = await supabaseService.getBrandSettings();
-      // Ensure new fields exist even if loading old data
       const mergedData = { ...settings, ...data };
       setSettings(mergedData);
       applyTheme(mergedData);
@@ -49,8 +47,6 @@ export const BrandProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     root.style.setProperty('--color-primary', data.primaryColor);
     root.style.setProperty('--color-secondary', data.secondaryColor);
     root.style.setProperty('--color-background', data.backgroundColor);
-    
-    // Update Document Title
     document.title = data.systemName;
   };
 

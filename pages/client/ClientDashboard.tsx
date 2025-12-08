@@ -1,13 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, ChevronRight, Wallet, Plus, Calendar, FileText, TrendingUp, X, Percent, Eye, EyeOff, Gift } from 'lucide-react';
+import { Bell, ChevronRight, Wallet, Plus, Calendar, FileText, TrendingUp, X, Percent, Eye, EyeOff, Gift, Tag } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Skeleton } from '../../components/Skeleton';
 import { supabaseService } from '../../services/supabaseService';
 import { useToast } from '../../components/Toast';
 import { LoanTimeline } from '../../components/LoanTimeline';
-import { LoanRequest } from '../../types';
+import { LoanRequest, Campaign } from '../../types';
+import { MarketingPopup } from '../../components/MarketingPopup';
 
 export const ClientDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -17,6 +17,7 @@ export const ClientDashboard: React.FC = () => {
   const [isRenegotiateOpen, setIsRenegotiateOpen] = useState(false);
   const [isPrivacyEnabled, setIsPrivacyEnabled] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<LoanRequest | null>(null);
+  const [activeCampaigns, setActiveCampaigns] = useState<Campaign[]>([]);
 
   // Renegotiation State
   const [renegotiateInstallments, setRenegotiateInstallments] = useState(12);
@@ -53,6 +54,7 @@ export const ClientDashboard: React.FC = () => {
     const user = supabaseService.auth.getUser();
     const loans = await supabaseService.getClientLoans();
     const pendingReq = await supabaseService.getClientPendingRequest();
+    const campaigns = await supabaseService.getActiveCampaigns();
     
     let totalDebt = 0;
     let nextInstDate = '--/--';
@@ -80,6 +82,7 @@ export const ClientDashboard: React.FC = () => {
     });
     
     setPendingRequest(pendingReq);
+    setActiveCampaigns(campaigns);
     setLoading(false);
   };
 
@@ -133,6 +136,8 @@ export const ClientDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-black text-white pb-24 font-sans">
+      <MarketingPopup />
+
       <header className="sticky top-0 z-20 bg-black/80 backdrop-blur-md border-b border-zinc-900 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
             <span className="font-bold tracking-tight text-lg">TUBARÃO</span>
@@ -238,8 +243,35 @@ export const ClientDashboard: React.FC = () => {
            <ActionButton icon={TrendingUp} label="Extrato" onClick={() => navigate('/client/statement')} />
            <ActionButton icon={Percent} label="Renegociar" onClick={() => setIsRenegotiateOpen(true)} disabled={userData.balance === 0} />
         </div>
+        
+        {/* Active Promotions Feed */}
+        {activeCampaigns.length > 0 && (
+            <div className="space-y-4">
+                <h3 className="text-white font-bold flex items-center gap-2">
+                    <Tag size={18} className="text-[#D4AF37]" /> Parceiros & Ofertas
+                </h3>
+                <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
+                    {activeCampaigns.map(camp => (
+                        <div 
+                            key={camp.id} 
+                            onClick={() => camp.link && window.open(camp.link, '_blank')}
+                            className="min-w-[260px] bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden cursor-pointer hover:border-[#D4AF37] transition-all snap-center shadow-lg"
+                        >
+                            <div className="h-28 bg-black relative">
+                                {camp.imageUrl && <img src={camp.imageUrl} className="w-full h-full object-cover" alt={camp.title} />}
+                                <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 to-transparent"></div>
+                            </div>
+                            <div className="p-4">
+                                <h4 className="font-bold text-white mb-1">{camp.title}</h4>
+                                <p className="text-xs text-zinc-400 line-clamp-2">{camp.description}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )}
 
-        {/* Refer a Friend Banner - Now with Web Share */}
+        {/* Refer a Friend Banner */}
         <div onClick={handleShare} className="bg-gradient-to-r from-zinc-900 to-black border border-zinc-800 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:border-[#D4AF37]/30 transition-colors active:scale-95">
             <div className="w-12 h-12 rounded-full bg-[#D4AF37]/10 flex items-center justify-center text-[#D4AF37] shrink-0">
                <Gift size={24} />
