@@ -403,7 +403,7 @@ export const Settings: React.FC = () => {
                              <div className="bg-white p-2 rounded-lg mb-4">
                                  <img src={qrCode} alt="QR Code" className="w-48 h-48 object-contain" />
                              </div>
-                             <p className="text-xs text-zinc-500 mb-4 text-center max-w-[200px]">Abra o WhatsApp > Aparelhos Conectados > Conectar Aparelho</p>
+                             <p className="text-xs text-zinc-500 mb-4 text-center max-w-[200px]">Abra o WhatsApp &gt; Aparelhos Conectados &gt; Conectar Aparelho</p>
                              <div className="flex gap-2 w-full">
                                 <Button onClick={checkWaStatus} variant="secondary" className="flex-1">
                                     Já Escaniei
