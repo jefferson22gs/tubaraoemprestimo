@@ -150,6 +150,9 @@ export const Settings: React.FC = () => {
         return;
     }
 
+    // IMPORTANT: Save config first to ensure service uses latest values
+    await whatsappService.updateConfig(waConfig);
+
     setLoadingWa(true);
     setQrCode(null);
 
@@ -164,12 +167,13 @@ export const Settings: React.FC = () => {
             if (status === 'open') {
                 addToast("Instância já está conectada!", 'success');
             } else {
-                addToast("Não foi possível obter o QR Code. Verifique os logs.", 'error');
+                // Could be that the instance exists but is not connected and didn't return QR (e.g. connecting state)
+                addToast("Não foi possível obter o QR Code. Verifique o status.", 'warning');
             }
         }
-    } catch (e) {
-        addToast("Erro ao conectar com a API. Verifique URL e Chave.", 'error');
+    } catch (e: any) {
         console.error(e);
+        addToast(`Erro ao conectar: ${e.message || 'Verifique URL e Chave.'}`, 'error');
     } finally {
         setLoadingWa(false);
     }
