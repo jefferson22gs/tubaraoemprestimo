@@ -1,4 +1,5 @@
 
+
 export enum UserRole {
   CLIENT = 'CLIENT',
   ADMIN = 'ADMIN'
@@ -6,6 +7,7 @@ export enum UserRole {
 
 export enum LoanStatus {
   PENDING = 'PENDING',
+  WAITING_DOCS = 'WAITING_DOCS', // New Status
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
   PAID = 'PAID',
@@ -62,6 +64,15 @@ export interface LoanRequest {
     videoHouseUrl?: string;
     videoVehicleUrl?: string;
   };
+  
+  // Supplemental Document Request
+  supplementalInfo?: {
+    requestedAt?: string;
+    description?: string; // What the admin asked for
+    docUrl?: string; // What the client uploaded
+    uploadedAt?: string;
+  };
+
   signatureUrl?: string;
 }
 
@@ -103,6 +114,12 @@ export interface Customer {
   totalDebt: number;
   activeLoansCount: number;
   joinedAt: string;
+  
+  // New Pre-approval field
+  preApprovedOffer?: {
+    amount: number;
+    createdAt: string;
+  };
 }
 
 export type CollectionRuleType = 'WHATSAPP' | 'EMAIL' | 'SMS';

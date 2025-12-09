@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 
@@ -69,7 +70,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 w-full z-50 bg-zinc-950 border-b border-zinc-800 p-4 flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-[#D4AF37] tracking-wider text-sm">ADMIN PANEL</span>
+          <Logo size="sm" />
         </div>
         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-zinc-400 hover:text-white">
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -223,7 +224,8 @@ export default function App() {
             <Route path="/demo" element={<DemoSimulator />} />
             
             {/* Client Protected */}
-            <Route path="/client/dashboard" element={<ClientLayout showNav={true} showBottomNav={true}><ClientDashboard /></ClientLayout>} />
+            {/* Set showNav={false} for Dashboard to avoid double headers */}
+            <Route path="/client/dashboard" element={<ClientLayout showNav={false} showBottomNav={true}><ClientDashboard /></ClientLayout>} />
             <Route path="/client/contracts" element={<ClientLayout showNav={true} showBottomNav={true}><Contracts /></ClientLayout>} />
             <Route path="/client/profile" element={<ClientLayout showNav={true} showBottomNav={true}><Profile /></ClientLayout>} />
             <Route path="/client/statement" element={<ClientLayout showNav={true} showBottomNav={true}><Statement /></ClientLayout>} />

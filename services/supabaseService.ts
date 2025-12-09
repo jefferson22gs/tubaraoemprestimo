@@ -1,4 +1,5 @@
 
+
 import { LoanRequest, LoanStatus, LoanPackage, SystemSettings, Customer, CollectionRule, Loan, InteractionLog, Transaction, WhatsappConfig, BrandSettings, UserAccess, UserRole, Installment, Campaign } from '../types';
 
 const STORAGE_KEYS = {
@@ -244,10 +245,42 @@ export const supabaseService = {
       return true;
   },
 
+  // Supplemental Documents (Admin Request)
+  requestSupplementalDoc: async (requestId: string, description: string) => {
+      const requests = loadFromStorage(STORAGE_KEYS.REQUESTS, []);
+      const req = requests.find((r: LoanRequest) => r.id === requestId);
+      if (req) {
+          req.status = LoanStatus.WAITING_DOCS;
+          req.supplementalInfo = {
+              requestedAt: new Date().toISOString(),
+              description: description,
+              docUrl: undefined
+          };
+          saveToStorage(STORAGE_KEYS.REQUESTS, requests);
+          return true;
+      }
+      return false;
+  },
+
+  // Client Upload Supplemental Doc
+  uploadSupplementalDoc: async (requestId: string, docUrl: string) => {
+      const requests = loadFromStorage(STORAGE_KEYS.REQUESTS, []);
+      const req = requests.find((r: LoanRequest) => r.id === requestId);
+      if (req && req.supplementalInfo) {
+          req.status = LoanStatus.PENDING; // Go back to pending for admin review
+          req.supplementalInfo.docUrl = docUrl;
+          req.supplementalInfo.uploadedAt = new Date().toISOString();
+          saveToStorage(STORAGE_KEYS.REQUESTS, requests);
+          return true;
+      }
+      return false;
+  },
+
   getClientLoans: async (): Promise<Loan[]> => loadFromStorage(STORAGE_KEYS.LOANS, []),
   getClientPendingRequest: async (): Promise<LoanRequest | null> => {
       const requests = loadFromStorage(STORAGE_KEYS.REQUESTS, []);
-      return requests.find((r: LoanRequest) => r.status === LoanStatus.PENDING) || null;
+      // Check for pending or waiting docs
+      return requests.find((r: LoanRequest) => r.status === LoanStatus.PENDING || r.status === LoanStatus.WAITING_DOCS) || null;
   },
 
   uploadPaymentProof: async (loanId: string, installmentId: string, proofUrl: string): Promise<boolean> => {
@@ -273,6 +306,36 @@ export const supabaseService = {
       const item = list.find((c: Customer) => c.id === id);
       if(item) { item.status = status; saveToStorage(STORAGE_KEYS.CUSTOMERS, list); }
       return true;
+  },
+  
+  // Pre-approval
+  sendPreApproval: async (customerId: string, amount: number) => {
+      const list = loadFromStorage(STORAGE_KEYS.CUSTOMERS, []);
+      const customer = list.find((c: Customer) => c.id === customerId);
+      if (customer) {
+          customer.preApprovedOffer = {
+              amount: amount,
+              createdAt: new Date().toISOString()
+          };
+          saveToStorage(STORAGE_KEYS.CUSTOMERS, list);
+          return true;
+      }
+      return false;
+  },
+  
+  // Client check for pre-approval
+  getPreApproval: async (): Promise<number | null> => {
+      const user = loadFromStorage<any>(STORAGE_KEYS.USER, null);
+      if (!user) return null;
+      
+      const customers = loadFromStorage(STORAGE_KEYS.CUSTOMERS, []);
+      // Find customer by email/name simulation
+      const customer = customers.find((c: Customer) => c.email === user.email);
+      
+      if (customer && customer.preApprovedOffer) {
+          return customer.preApprovedOffer.amount;
+      }
+      return null;
   },
 
   getCollectionRules: async (): Promise<CollectionRule[]> => loadFromStorage(STORAGE_KEYS.RULES, []),

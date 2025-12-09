@@ -1,16 +1,23 @@
 
+
 import React, { useState, useEffect } from 'react';
-import { Check, X, Eye, Maximize, Layers, Download, Filter, Video, Users, Phone } from 'lucide-react';
+import { Check, X, Eye, Maximize, Layers, Download, Filter, Video, Users, Phone, FileWarning, Send } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { supabaseService } from '../../services/supabaseService';
 import { LoanRequest, LoanStatus } from '../../types';
 import { ImageViewer } from '../../components/ImageViewer';
+import { useToast } from '../../components/Toast';
 
 export const Requests: React.FC = () => {
+  const { addToast } = useToast();
   const [requests, setRequests] = useState<LoanRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<LoanRequest | null>(null);
   const [viewingImage, setViewingImage] = useState<{ urls: string[]; title: string } | null>(null);
   const [processing, setProcessing] = useState<string | null>(null);
+  
+  // Document Request Modal
+  const [isDocRequestOpen, setIsDocRequestOpen] = useState(false);
+  const [docRequestDesc, setDocRequestDesc] = useState('');
   
   // Filters
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
@@ -30,7 +37,7 @@ export const Requests: React.FC = () => {
     setProcessing(null);
     setSelectedRequest(null);
     loadRequests();
-    alert("Solicitação aprovada e saldo liberado.");
+    addToast("Solicitação aprovada e saldo liberado.", 'success');
   };
 
   const handleReject = async (id: string) => {
@@ -39,6 +46,20 @@ export const Requests: React.FC = () => {
     setProcessing(null);
     setSelectedRequest(null);
     loadRequests();
+    addToast("Solicitação reprovada.", 'info');
+  };
+
+  const handleRequestDoc = async () => {
+     if (!selectedRequest || !docRequestDesc) return;
+     
+     setProcessing(selectedRequest.id);
+     await supabaseService.requestSupplementalDoc(selectedRequest.id, docRequestDesc);
+     setProcessing(null);
+     setIsDocRequestOpen(false);
+     setDocRequestDesc('');
+     setSelectedRequest(null);
+     loadRequests();
+     addToast("Solicitação de documento enviada ao cliente.", 'success');
   };
 
   const ensureArray = (src?: string | string[]): string[] => {
@@ -87,7 +108,7 @@ export const Requests: React.FC = () => {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-6">
-         {['ALL', LoanStatus.PENDING, LoanStatus.APPROVED, LoanStatus.REJECTED].map((status) => (
+         {['ALL', LoanStatus.PENDING, LoanStatus.WAITING_DOCS, LoanStatus.APPROVED, LoanStatus.REJECTED].map((status) => (
              <button
                 key={status}
                 onClick={() => setFilterStatus(status)}
@@ -97,7 +118,7 @@ export const Requests: React.FC = () => {
                     : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white'
                 }`}
              >
-                {status === 'ALL' ? 'Todos' : status}
+                {status === 'ALL' ? 'Todos' : status === 'WAITING_DOCS' ? 'Aguardando Doc.' : status}
              </button>
          ))}
       </div>
@@ -131,9 +152,10 @@ export const Requests: React.FC = () => {
                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${
                             req.status === LoanStatus.APPROVED ? 'bg-green-900/30 text-green-400' :
                             req.status === LoanStatus.REJECTED ? 'bg-red-900/30 text-red-400' :
+                            req.status === LoanStatus.WAITING_DOCS ? 'bg-blue-900/30 text-blue-400' :
                             'bg-yellow-900/30 text-yellow-400'
                         }`}>
-                            {req.status}
+                            {req.status === LoanStatus.WAITING_DOCS ? 'AGUARDANDO DOC' : req.status}
                         </span>
                         </td>
                         <td className="p-4 text-zinc-500 text-sm">
@@ -165,6 +187,7 @@ export const Requests: React.FC = () => {
                   <span className={`text-xs px-2 py-1 rounded-full border ${
                     selectedRequest.status === LoanStatus.APPROVED ? 'bg-green-900/30 text-green-500 border-green-800' :
                     selectedRequest.status === LoanStatus.REJECTED ? 'bg-red-900/30 text-red-500 border-red-800' :
+                    selectedRequest.status === LoanStatus.WAITING_DOCS ? 'bg-blue-900/30 text-blue-500 border-blue-800' :
                     'bg-yellow-900/30 text-yellow-500 border-yellow-800'
                   }`}>
                     {selectedRequest.status}
@@ -187,6 +210,33 @@ export const Requests: React.FC = () => {
                 <InfoBox label="Valor Solicitado" value={`R$ ${selectedRequest.amount.toLocaleString()}`} highlight />
                 <InfoBox label="Condição" value={`${selectedRequest.installments}x de R$ ${(selectedRequest.amount / selectedRequest.installments * 1.05).toLocaleString('pt-BR', {maximumFractionDigits: 2})}`} />
               </div>
+
+              {/* Supplemental Docs Section (If Active or Completed) */}
+              {selectedRequest.supplementalInfo && (
+                  <div className="bg-blue-900/10 border border-blue-800/50 p-4 rounded-xl">
+                      <h3 className="text-blue-400 font-bold text-sm uppercase tracking-wider mb-2 flex items-center gap-2">
+                          <FileWarning size={16} /> Solicitação de Documento Extra
+                      </h3>
+                      <p className="text-zinc-300 text-sm mb-4">
+                          <strong>Admin pediu:</strong> "{selectedRequest.supplementalInfo.description}"
+                      </p>
+
+                      {selectedRequest.supplementalInfo.docUrl ? (
+                          <div className="bg-black p-4 rounded-lg border border-zinc-800 w-fit">
+                              <p className="text-xs text-zinc-500 mb-2">Documento Enviado pelo Cliente:</p>
+                              <DocCard 
+                                title="Doc. Complementar" 
+                                urls={[selectedRequest.supplementalInfo.docUrl]} 
+                                onView={() => setViewingImage({ urls: [selectedRequest.supplementalInfo.docUrl!], title: "Doc. Complementar" })}
+                              />
+                          </div>
+                      ) : (
+                          <div className="text-yellow-500 text-sm italic">
+                             Aguardando envio do cliente...
+                          </div>
+                      )}
+                  </div>
+              )}
 
               {/* References Section */}
               {selectedRequest.references && (
@@ -306,23 +356,57 @@ export const Requests: React.FC = () => {
             </div>
 
             {/* Actions Footer */}
-            {selectedRequest.status === LoanStatus.PENDING && (
+            {(selectedRequest.status === LoanStatus.PENDING || selectedRequest.status === LoanStatus.WAITING_DOCS) && (
                 <div className="p-6 border-t border-zinc-800 bg-zinc-950 flex flex-col md:flex-row justify-between items-center gap-4">
                 <span className="text-xs text-zinc-500 text-center md:text-left">
-                    Aprovação libera crédito imediato. Reprovação notifica o cliente.
+                    Se aprovar agora, o saldo será liberado na carteira.
                 </span>
                 <div className="flex gap-4 w-full md:w-auto">
+                    {/* Request Doc Button */}
+                    <Button variant="secondary" className="flex-1 md:flex-initial" onClick={() => setIsDocRequestOpen(true)}>
+                         <FileWarning size={18} className="mr-2" /> Solicitar Doc.
+                    </Button>
+
                     <Button variant="danger" className="flex-1 md:flex-initial" onClick={() => handleReject(selectedRequest.id)} isLoading={processing === selectedRequest.id}>
-                    <X size={18} className="mr-2" /> REPROVAR
+                       <X size={18} className="mr-2" /> REPROVAR
                     </Button>
                     <Button variant="gold" className="flex-1 md:flex-initial bg-[#D4AF37] text-black font-bold hover:bg-[#B5942F]" onClick={() => handleApprove(selectedRequest.id)} isLoading={processing === selectedRequest.id}>
-                    <Check size={18} className="mr-2" /> APROVAR EMPRÉSTIMO
+                       <Check size={18} className="mr-2" /> APROVAR EMPRÉSTIMO
                     </Button>
                 </div>
                 </div>
             )}
           </div>
         </div>
+      )}
+
+      {/* Request Document Modal */}
+      {isDocRequestOpen && (
+          <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[60] p-4">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in zoom-in duration-200">
+                  <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                          <FileWarning className="text-[#D4AF37]" /> Solicitar Documento
+                      </h3>
+                      <button onClick={() => setIsDocRequestOpen(false)}><X className="text-zinc-500 hover:text-white" /></button>
+                  </div>
+                  
+                  <p className="text-zinc-400 text-sm mb-4">
+                      O processo mudará para "AGUARDANDO DOC". O cliente receberá uma notificação para enviar o anexo.
+                  </p>
+                  
+                  <textarea 
+                      value={docRequestDesc}
+                      onChange={(e) => setDocRequestDesc(e.target.value)}
+                      className="w-full h-32 bg-black border border-zinc-700 rounded-lg p-3 text-white focus:border-[#D4AF37] outline-none resize-none mb-4"
+                      placeholder="Ex: Por favor, envie um comprovante de residência atualizado (últimos 60 dias)..."
+                  />
+                  
+                  <Button onClick={handleRequestDoc} isLoading={!!processing} className="w-full">
+                      <Send size={18} className="mr-2" /> Enviar Solicitação
+                  </Button>
+              </div>
+          </div>
       )}
 
       {/* Full Screen Image Viewer */}

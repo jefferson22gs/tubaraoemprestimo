@@ -1,13 +1,15 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, ChevronRight, Wallet, Plus, Calendar, FileText, TrendingUp, X, Percent, Eye, EyeOff, Gift, Tag } from 'lucide-react';
+import { Bell, ChevronRight, Wallet, Plus, Calendar, FileText, TrendingUp, X, Percent, Eye, EyeOff, Gift, Tag, Sparkles, AlertTriangle, Upload, CheckCircle } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Skeleton } from '../../components/Skeleton';
 import { supabaseService } from '../../services/supabaseService';
 import { useToast } from '../../components/Toast';
 import { LoanTimeline } from '../../components/LoanTimeline';
-import { LoanRequest, Campaign } from '../../types';
+import { LoanRequest, Campaign, LoanStatus } from '../../types';
 import { MarketingPopup } from '../../components/MarketingPopup';
+import { Logo } from '../../components/Logo';
 
 export const ClientDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +20,11 @@ export const ClientDashboard: React.FC = () => {
   const [isPrivacyEnabled, setIsPrivacyEnabled] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<LoanRequest | null>(null);
   const [activeCampaigns, setActiveCampaigns] = useState<Campaign[]>([]);
+  const [preApprovedAmount, setPreApprovedAmount] = useState<number | null>(null);
+
+  // Upload Modal for Waiting Docs
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
 
   // Renegotiation State
   const [renegotiateInstallments, setRenegotiateInstallments] = useState(12);
@@ -55,7 +62,8 @@ export const ClientDashboard: React.FC = () => {
     const loans = await supabaseService.getClientLoans();
     const pendingReq = await supabaseService.getClientPendingRequest();
     const campaigns = await supabaseService.getActiveCampaigns();
-    
+    const preApproved = await supabaseService.getPreApproval();
+
     let totalDebt = 0;
     let nextInstDate = '--/--';
     let nextInstVal = 0;
@@ -83,6 +91,7 @@ export const ClientDashboard: React.FC = () => {
     
     setPendingRequest(pendingReq);
     setActiveCampaigns(campaigns);
+    setPreApprovedAmount(preApproved);
     setLoading(false);
   };
 
@@ -110,23 +119,27 @@ export const ClientDashboard: React.FC = () => {
     }
   };
 
-  const triggerMockNotification = () => {
-      if ('serviceWorker' in navigator && 'PushManager' in window) {
-          navigator.serviceWorker.ready.then(reg => {
-              reg.showNotification('Alerta de Vencimento', {
-                  body: 'Sua parcela vence amanhã! Pague agora e evite multas.',
-                  icon: '/icon-192x192.png',
-                  vibrate: [200, 100, 200]
-              } as any);
-          });
-      } else {
-          addToast("Notificações não suportadas neste navegador.", 'error');
-      }
+  const handleDocUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+     const file = e.target.files?.[0];
+     if (file && pendingRequest) {
+         setUploadingDoc(true);
+         const reader = new FileReader();
+         reader.onloadend = async () => {
+             const result = reader.result as string;
+             await supabaseService.uploadSupplementalDoc(pendingRequest.id, result);
+             setUploadingDoc(false);
+             setIsUploadModalOpen(false);
+             addToast("Documento enviado! Sua análise continuará.", 'success');
+             loadDashboardData(); // Refresh state
+         };
+         reader.readAsDataURL(file);
+     }
   };
 
   const notifications = [
+    ...(preApprovedAmount ? [{ id: 99, title: 'Crédito Pré-Aprovado', msg: `Você tem R$ ${preApprovedAmount} disponíveis!`, type: 'success', time: 'Agora' }] : []),
+    ...(pendingRequest?.status === LoanStatus.WAITING_DOCS ? [{ id: 98, title: 'Ação Necessária', msg: 'Envie o documento solicitado.', type: 'warning', time: 'Agora' }] : []),
     { id: 1, title: 'Parcela Vencendo', msg: 'Sua fatura vence em 3 dias. Evite juros.', type: 'warning', time: '2h' },
-    { id: 2, title: 'Empréstimo Aprovado', msg: 'O valor solicitado já está disponível.', type: 'success', time: '1d' },
   ];
 
   const formatCurrency = (val: number) => {
@@ -140,7 +153,7 @@ export const ClientDashboard: React.FC = () => {
 
       <header className="sticky top-0 z-20 bg-black/80 backdrop-blur-md border-b border-zinc-900 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-            <span className="font-bold tracking-tight text-lg">TUBARÃO</span>
+            <Logo size="sm" />
         </div>
         
         <div className="flex items-center gap-4">
@@ -154,10 +167,10 @@ export const ClientDashboard: React.FC = () => {
           <div className="relative">
             <button 
               onClick={() => setIsNotifOpen(!isNotifOpen)}
-              className={`relative p-2 rounded-full transition-colors ${isNotifOpen ? 'text-[#D4AF37] bg-zinc-900' : 'text-zinc-400 hover:text-white'}`}
+              className={`relative p-2 rounded-full transition-colors ${isNotifOpen || notifications.length > 1 ? 'text-[#D4AF37] bg-zinc-900' : 'text-zinc-400 hover:text-white'}`}
             >
               <Bell size={20} />
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-600 border-2 border-black rounded-full"></span>
+              {notifications.length > 0 && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-600 border-2 border-black rounded-full"></span>}
             </button>
 
             {isNotifOpen && (
@@ -169,13 +182,11 @@ export const ClientDashboard: React.FC = () => {
                 <div>
                   {notifications.map((notif) => (
                     <div key={notif.id} className="p-4 border-b border-zinc-900 hover:bg-zinc-900/40">
-                       <h4 className="text-sm font-bold text-white">{notif.title}</h4>
+                       <h4 className={`text-sm font-bold ${notif.type === 'success' ? 'text-green-500' : notif.type === 'warning' ? 'text-yellow-500' : 'text-white'}`}>{notif.title}</h4>
                        <p className="text-xs text-zinc-400 mt-1">{notif.msg}</p>
                     </div>
                   ))}
-                  <button onClick={triggerMockNotification} className="w-full p-3 text-xs text-center text-zinc-500 hover:text-white">
-                      Testar Push Notification
-                  </button>
+                  {notifications.length === 0 && <div className="p-4 text-xs text-zinc-500 text-center">Nenhuma notificação nova.</div>}
                 </div>
               </div>
             )}
@@ -195,6 +206,42 @@ export const ClientDashboard: React.FC = () => {
           <h1 className="text-zinc-500 text-sm font-medium tracking-wide">Bem-vindo de volta,</h1>
           {loading ? <Skeleton className="h-8 w-48 mt-1" /> : <h2 className="text-2xl font-bold text-white tracking-tight">{userData.name}</h2>}
         </div>
+
+        {/* Pre-Approved Offer Banner */}
+        {preApprovedAmount && (
+            <div className="bg-gradient-to-r from-[#D4AF37] to-[#FDB931] rounded-2xl p-4 shadow-lg shadow-[#D4AF37]/20 relative overflow-hidden animate-pulse">
+                <div className="absolute top-0 right-0 p-4 opacity-20">
+                    <Sparkles size={64} className="text-black" />
+                </div>
+                <div className="relative z-10 text-black">
+                    <div className="flex items-center gap-2 mb-1">
+                        <Sparkles size={16} />
+                        <span className="text-xs font-bold uppercase tracking-wider">Oferta Especial</span>
+                    </div>
+                    <h3 className="text-lg font-bold leading-tight mb-2">Crédito Pré-Aprovado</h3>
+                    <div className="text-3xl font-extrabold mb-3">R$ {preApprovedAmount.toLocaleString()}</div>
+                    <Button className="w-full bg-black text-[#D4AF37] hover:bg-zinc-800 border-none">
+                        Contratar Agora
+                    </Button>
+                </div>
+            </div>
+        )}
+
+        {/* Waiting Docs Action Card */}
+        {pendingRequest && pendingRequest.status === LoanStatus.WAITING_DOCS && (
+            <div className="bg-blue-900/20 border border-blue-500/50 rounded-2xl p-4 flex flex-col gap-3">
+                 <div className="flex items-center gap-3 text-blue-400 font-bold">
+                     <AlertTriangle size={20} /> Pendência na Análise
+                 </div>
+                 <p className="text-sm text-zinc-300">
+                     Precisamos de um documento complementar: <br/>
+                     <span className="text-white font-bold italic">"{pendingRequest.supplementalInfo?.description}"</span>
+                 </p>
+                 <Button onClick={() => setIsUploadModalOpen(true)} className="w-full bg-blue-600 hover:bg-blue-700 text-white border-none">
+                     <Upload size={16} className="mr-2"/> Enviar Documento
+                 </Button>
+            </div>
+        )}
 
         {/* Loan Progress Timeline */}
         {pendingRequest && (
@@ -290,6 +337,49 @@ export const ClientDashboard: React.FC = () => {
           </button>
         </div>
       </main>
+
+      {/* Upload Supplemental Doc Modal */}
+      {isUploadModalOpen && (
+         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in zoom-in duration-200">
+                <div className="flex justify-between items-center mb-6 border-b border-zinc-800 pb-4">
+                    <h3 className="text-xl font-bold text-white">Enviar Documento</h3>
+                    <button onClick={() => setIsUploadModalOpen(false)}><X className="text-zinc-500 hover:text-white"/></button>
+                </div>
+                
+                <p className="text-sm text-zinc-400 mb-6">
+                    Selecione uma foto ou PDF do documento solicitado: <br/>
+                    <strong className="text-white">"{pendingRequest?.supplementalInfo?.description}"</strong>
+                </p>
+
+                <div className="relative mb-6">
+                    <input 
+                        type="file" 
+                        accept="image/*,application/pdf"
+                        onChange={handleDocUpload}
+                        className="hidden" 
+                        id="supp-upload"
+                        disabled={uploadingDoc}
+                    />
+                    <label 
+                        htmlFor="supp-upload"
+                        className={`flex flex-col items-center justify-center gap-2 w-full p-8 rounded-xl border-2 border-dashed cursor-pointer transition-all ${
+                            uploadingDoc
+                            ? 'bg-zinc-800 border-zinc-700 opacity-50'
+                            : 'bg-zinc-900/50 border-zinc-700 hover:border-[#D4AF37] hover:bg-zinc-800'
+                        }`}
+                    >
+                         <Upload size={32} className="text-[#D4AF37]" />
+                         <span className="font-bold text-sm text-white">{uploadingDoc ? "Enviando..." : "Toque para selecionar"}</span>
+                    </label>
+                </div>
+                
+                <Button onClick={() => setIsUploadModalOpen(false)} variant="secondary" className="w-full">
+                    Cancelar
+                </Button>
+             </div>
+         </div>
+      )}
 
       {/* Renegotiation Modal */}
       {isRenegotiateOpen && (

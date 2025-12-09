@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, Edit2, X, Percent, Zap, Smartphone, QrCode, CheckCircle2, RotateCcw, MessageSquare, Clock, Palette, Upload, Image as ImageIcon, Building2 } from 'lucide-react';
+import { Save, Plus, Trash2, Edit2, X, Percent, Zap, Smartphone, QrCode, CheckCircle2, RotateCcw, MessageSquare, Clock, Palette, Upload, Image as ImageIcon, Building2, Settings as SettingsIcon } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { supabaseService } from '../../services/supabaseService';
 import { whatsappService } from '../../services/whatsappService';
@@ -165,15 +166,9 @@ export const Settings: React.FC = () => {
   };
 
   const handleRestoreBrand = async () => {
-    if (confirm("Restaurar para o padrão Tubarão Empréstimos?")) {
+    if (confirm("Restaurar para o padrão (Logo.png original)?")) {
         await resetBrand();
         addToast("Marca restaurada para o padrão.", 'info');
-    }
-  };
-
-  const handleResetSystem = async () => {
-    if (confirm("ATENÇÃO: Isso apagará TODOS os dados (empréstimos, clientes, configurações) e restaurará o estado inicial do sistema. Continuar?")) {
-      await supabaseService.resetSystem();
     }
   };
 
@@ -299,6 +294,9 @@ export const Settings: React.FC = () => {
              {!waConfig.isConnected && !qrCode && <Button onClick={handleConnectWa} isLoading={loadingWa}>Gerar QR Code</Button>}
              {waConfig.isConnected && <div className="text-green-500 font-bold"><CheckCircle2 size={48}/> CONECTADO</div>}
              {qrCode && <img src={qrCode} alt="QR" className="w-48 h-48 bg-white p-2 rounded" />}
+             {waConfig.isConnected && (
+                <Button onClick={handleDisconnectWa} variant="danger" className="mt-4">Desconectar</Button>
+             )}
           </div>
        </div>
     </div>
@@ -366,11 +364,17 @@ export const Settings: React.FC = () => {
                     <label className="block text-sm text-zinc-400 mb-4 text-center">Logotipo</label>
                     
                     <div className="relative group w-48 h-24 flex items-center justify-center border-2 border-dashed border-zinc-700 rounded-lg overflow-hidden bg-zinc-900/50 mb-4">
-                        {localBrand.logoUrl ? (
-                            <img src={localBrand.logoUrl} alt="Logo Preview" className="w-full h-full object-contain p-2" />
-                        ) : (
-                            <span className="text-zinc-600 text-xs">Logo Padrão</span>
-                        )}
+                        <img 
+                            src={localBrand.logoUrl || "/Logo.png"} 
+                            alt="Logo Preview" 
+                            className="w-full h-full object-contain p-2"
+                            onError={(e) => {
+                                const target = e.currentTarget;
+                                if (!target.src.endsWith('/Logo.png')) {
+                                    target.src = "/Logo.png";
+                                }
+                            }}
+                        />
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                             <Upload size={24} className="text-white" />
                         </div>
@@ -380,7 +384,7 @@ export const Settings: React.FC = () => {
                     <div className="flex gap-2">
                         {localBrand.logoUrl && (
                             <Button size="sm" variant="secondary" onClick={() => setLocalBrand({...localBrand, logoUrl: null})}>
-                                Remover
+                                Remover Customização
                             </Button>
                         )}
                     </div>
@@ -447,14 +451,29 @@ export const Settings: React.FC = () => {
   );
 
   return (
-    <div className="p-8 bg-black min-h-screen text-white pb-32">
-      <h1 className="text-3xl font-bold mb-8 text-[#D4AF37]">Configurações</h1>
+    <div className="p-4 md:p-8 bg-black min-h-screen text-white pb-32">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <h1 className="text-3xl font-bold text-[#D4AF37] flex items-center gap-2">
+           <SettingsIcon size={32} /> Configurações do Sistema
+        </h1>
+      </div>
 
-      <div className="flex gap-6 border-b border-zinc-800 mb-8 overflow-x-auto">
-        <button onClick={() => setActiveTab('FINANCIAL')} className={`pb-4 px-2 text-sm font-bold tracking-wide transition-colors relative whitespace-nowrap ${activeTab === 'FINANCIAL' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>FINANCEIRO {activeTab === 'FINANCIAL' && <div className="absolute bottom-0 left-0 w-full h-1 bg-[#D4AF37] rounded-t-full"></div>}</button>
-        <button onClick={() => setActiveTab('AUTOMATION')} className={`pb-4 px-2 text-sm font-bold tracking-wide transition-colors relative whitespace-nowrap ${activeTab === 'AUTOMATION' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>AUTOMAÇÃO {activeTab === 'AUTOMATION' && <div className="absolute bottom-0 left-0 w-full h-1 bg-[#D4AF37] rounded-t-full"></div>}</button>
-        <button onClick={() => setActiveTab('INTEGRATION')} className={`pb-4 px-2 text-sm font-bold tracking-wide transition-colors relative whitespace-nowrap ${activeTab === 'INTEGRATION' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>INTEGRAÇÃO {activeTab === 'INTEGRATION' && <div className="absolute bottom-0 left-0 w-full h-1 bg-[#D4AF37] rounded-t-full"></div>}</button>
-        <button onClick={() => setActiveTab('BRANDING')} className={`pb-4 px-2 text-sm font-bold tracking-wide transition-colors relative whitespace-nowrap ${activeTab === 'BRANDING' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>PERSONALIZAÇÃO {activeTab === 'BRANDING' && <div className="absolute bottom-0 left-0 w-full h-1 bg-[#D4AF37] rounded-t-full"></div>}</button>
+      <div className="flex flex-wrap gap-2 mb-8 bg-zinc-900/50 p-1 rounded-xl w-fit border border-zinc-800">
+        {['FINANCIAL', 'AUTOMATION', 'INTEGRATION', 'BRANDING'].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab as any)}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+              activeTab === tab 
+              ? 'bg-[#D4AF37] text-black shadow-lg' 
+              : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+            }`}
+          >
+            {tab === 'FINANCIAL' ? 'Financeiro' : 
+             tab === 'AUTOMATION' ? 'Automação' : 
+             tab === 'INTEGRATION' ? 'Integrações' : 'Identidade Visual'}
+          </button>
+        ))}
       </div>
 
       {activeTab === 'FINANCIAL' && renderFinancialTab()}
@@ -462,34 +481,86 @@ export const Settings: React.FC = () => {
       {activeTab === 'INTEGRATION' && renderIntegrationTab()}
       {activeTab === 'BRANDING' && renderBrandingTab()}
 
-      <div className="mt-16 pt-8 border-t border-zinc-800">
-        <h3 className="text-red-500 font-bold mb-4 flex items-center gap-2"><RotateCcw size={18}/> Zona de Perigo</h3>
-        <Button variant="danger" className="bg-red-900/10 border border-red-900/50 text-red-500 hover:bg-red-900/20" onClick={handleResetSystem}>
-           Resetar Tudo
-        </Button>
-      </div>
-
+      {/* Modals */}
       {isPkgModalOpen && (
         <Modal title={currentPkg.id ? 'Editar Pacote' : 'Novo Pacote'} onClose={() => setIsPkgModalOpen(false)}>
             <div className="space-y-4">
-              <input value={currentPkg.name} onChange={e => setCurrentPkg({...currentPkg, name: e.target.value})} className={inputStyle} placeholder="Nome do Pacote" />
-              <div className="grid grid-cols-2 gap-4">
-                 <input type="number" value={currentPkg.minValue} onChange={e => setCurrentPkg({...currentPkg, minValue: Number(e.target.value)})} className={inputStyle} placeholder="Mínimo" />
-                 <input type="number" value={currentPkg.maxValue} onChange={e => setCurrentPkg({...currentPkg, maxValue: Number(e.target.value)})} className={inputStyle} placeholder="Máximo" />
-              </div>
-              <input type="number" value={currentPkg.interestRate} onChange={e => setCurrentPkg({...currentPkg, interestRate: Number(e.target.value)})} className={inputStyle} placeholder="Juros %" />
-              <Button onClick={handleSavePackage} isLoading={loadingPkg} className="w-full mt-4">Salvar</Button>
+                <div>
+                    <label className="block text-sm text-zinc-400 mb-1">Nome do Pacote</label>
+                    <input value={currentPkg.name || ''} onChange={e => setCurrentPkg({...currentPkg, name: e.target.value})} className={inputStyle} placeholder="Ex: Ouro" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm text-zinc-400 mb-1">Min (R$)</label>
+                        <input type="number" value={currentPkg.minValue || ''} onChange={e => setCurrentPkg({...currentPkg, minValue: Number(e.target.value)})} className={inputStyle} />
+                    </div>
+                    <div>
+                        <label className="block text-sm text-zinc-400 mb-1">Máx (R$)</label>
+                        <input type="number" value={currentPkg.maxValue || ''} onChange={e => setCurrentPkg({...currentPkg, maxValue: Number(e.target.value)})} className={inputStyle} />
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm text-zinc-400 mb-1">Juros (%)</label>
+                        <input type="number" step="0.1" value={currentPkg.interestRate || ''} onChange={e => setCurrentPkg({...currentPkg, interestRate: Number(e.target.value)})} className={inputStyle} />
+                    </div>
+                    <div>
+                        <label className="block text-sm text-zinc-400 mb-1">Parcelas (Max)</label>
+                        <input type="number" value={currentPkg.maxInstallments || ''} onChange={e => setCurrentPkg({...currentPkg, maxInstallments: Number(e.target.value)})} className={inputStyle} />
+                    </div>
+                </div>
+                <Button onClick={handleSavePackage} isLoading={loadingPkg} className="w-full mt-2">Salvar Pacote</Button>
             </div>
         </Modal>
       )}
 
       {isRuleModalOpen && (
         <Modal title={currentRule.id ? 'Editar Regra' : 'Nova Regra'} onClose={() => setIsRuleModalOpen(false)}>
-            <div className="space-y-4">
-              <input type="number" value={currentRule.daysOffset} onChange={e => setCurrentRule({...currentRule, daysOffset: Number(e.target.value)})} className={inputStyle} placeholder="Dias (ex: -3)" />
-              <textarea value={currentRule.messageTemplate} onChange={e => setCurrentRule({...currentRule, messageTemplate: e.target.value})} className={inputStyle} placeholder="Mensagem..." />
-              <Button onClick={handleSaveRule} isLoading={loadingAutomation} className="w-full mt-4">Salvar</Button>
-            </div>
+           <div className="space-y-4">
+                <div>
+                    <label className="block text-sm text-zinc-400 mb-1">Quando enviar?</label>
+                    <div className="flex gap-2">
+                        <select 
+                            value={currentRule.daysOffset} 
+                            onChange={e => setCurrentRule({...currentRule, daysOffset: Number(e.target.value)})}
+                            className={inputStyle}
+                        >
+                            <option value={-3}>3 dias antes</option>
+                            <option value={-1}>1 dia antes</option>
+                            <option value={0}>No dia do vencimento</option>
+                            <option value={1}>1 dia de atraso</option>
+                            <option value={3}>3 dias de atraso</option>
+                            <option value={5}>5 dias de atraso</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div>
+                    <label className="block text-sm text-zinc-400 mb-1">Canal de Envio</label>
+                    <select 
+                        value={currentRule.type} 
+                        onChange={e => setCurrentRule({...currentRule, type: e.target.value as CollectionRuleType})}
+                        className={inputStyle}
+                    >
+                        <option value="WHATSAPP">WhatsApp</option>
+                        <option value="EMAIL">Email</option>
+                        <option value="SMS">SMS</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label className="block text-sm text-zinc-400 mb-1">Mensagem</label>
+                    <textarea 
+                        value={currentRule.messageTemplate || ''} 
+                        onChange={e => setCurrentRule({...currentRule, messageTemplate: e.target.value})}
+                        className={`${inputStyle} h-24 resize-none`}
+                        placeholder="Olá {nome}, sua fatura vence hoje..."
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">Variáveis: {'{nome}'}, {'{valor}'}, {'{vencimento}'}, {'{link_pagamento}'}</p>
+                </div>
+
+                <Button onClick={handleSaveRule} isLoading={loadingAutomation} className="w-full mt-2">Salvar Regra</Button>
+           </div>
         </Modal>
       )}
     </div>
@@ -498,7 +569,7 @@ export const Settings: React.FC = () => {
 
 const Modal = ({ title, onClose, children }: any) => (
   <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-in zoom-in duration-200">
       <div className="flex justify-between items-center mb-6 border-b border-zinc-800 pb-4">
         <h3 className="text-xl font-bold text-[#D4AF37]">{title}</h3>
         <button onClick={onClose} className="text-zinc-500 hover:text-white"><X /></button>
