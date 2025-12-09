@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 
 // Pages
-import { Home } from './pages/client/Home';
+// Home removed
 import { Wizard } from './pages/client/Wizard';
 import { Login } from './pages/auth/Login';
 import { ClientDashboard } from './pages/client/ClientDashboard';
@@ -105,7 +105,7 @@ const ClientLayout: React.FC<{ children: React.ReactNode; showNav?: boolean; sho
   const [isClientMenuOpen, setIsClientMenuOpen] = useState(false);
   
   const isDemoMode = location.pathname.includes('/demo');
-  const isPublicRoute = ['/', '/wizard', '/login', '/demo'].includes(location.pathname);
+  const isPublicRoute = ['/login', '/wizard', '/demo'].includes(location.pathname);
 
   const isActive = (path: string) => location.pathname === path ? 'text-[#D4AF37] bg-zinc-800' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50';
 
@@ -119,13 +119,10 @@ const ClientLayout: React.FC<{ children: React.ReactNode; showNav?: boolean; sho
         <Logo size="sm" />
       </div>
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        <Link to="/" onClick={() => setIsClientMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/')}`}>
-          <HomeIcon size={20} /> Início
-        </Link>
         {user && (
           <>
             <Link to="/client/dashboard" onClick={() => setIsClientMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/client/dashboard')}`}>
-              <LayoutDashboard size={20} /> Minha Conta
+              <LayoutDashboard size={20} /> Início
             </Link>
             <Link to="/client/contracts" onClick={() => setIsClientMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/client/contracts')}`}>
               <FileText size={20} /> Meus Contratos
@@ -173,7 +170,7 @@ const ClientLayout: React.FC<{ children: React.ReactNode; showNav?: boolean; sho
               <button onClick={() => setIsClientMenuOpen(true)} className="md:hidden text-zinc-400 hover:text-white p-1">
                 <Menu size={24} />
               </button>
-              <Link to="/"><Logo size="sm" /></Link>
+              <Link to={user ? "/client/dashboard" : "/login"}><Logo size="sm" /></Link>
             </div>
             
             <div className="flex items-center gap-4">
@@ -217,22 +214,22 @@ export default function App() {
         <Router>
           <InstallPrompt />
           <Routes>
-            {/* Public */}
-            <Route path="/" element={<ClientLayout><Home /></ClientLayout>} />
+            {/* Redirect Root to Login */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            
+            {/* Auth / Public */}
             <Route path="/login" element={<Login />} />
             <Route path="/wizard" element={<ClientLayout><Wizard /></ClientLayout>} />
-            
-            {/* Demo Simulator */}
             <Route path="/demo" element={<DemoSimulator />} />
             
-            {/* Client */}
+            {/* Client Protected */}
             <Route path="/client/dashboard" element={<ClientLayout showNav={true} showBottomNav={true}><ClientDashboard /></ClientLayout>} />
             <Route path="/client/contracts" element={<ClientLayout showNav={true} showBottomNav={true}><Contracts /></ClientLayout>} />
             <Route path="/client/profile" element={<ClientLayout showNav={true} showBottomNav={true}><Profile /></ClientLayout>} />
             <Route path="/client/statement" element={<ClientLayout showNav={true} showBottomNav={true}><Statement /></ClientLayout>} />
             <Route path="/client/help" element={<ClientLayout showNav={true} showBottomNav={true}><HelpCenter /></ClientLayout>} />
             
-            {/* Admin */}
+            {/* Admin Protected */}
             <Route path="/admin" element={<AdminLayout><Dashboard /></AdminLayout>} />
             <Route path="/admin/requests" element={<AdminLayout><Requests /></AdminLayout>} />
             <Route path="/admin/customers" element={<AdminLayout><Customers /></AdminLayout>} />

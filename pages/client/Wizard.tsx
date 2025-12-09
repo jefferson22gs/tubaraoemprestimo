@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, ChevronRight, ChevronLeft, Upload, User, MapPin, Camera as CameraIcon, PenTool, AlertCircle, FileText, Image as ImageIcon, Car, ScanFace, X, Plus, Loader2, Sparkles, Scan, Phone, Users, Video } from 'lucide-react';
@@ -10,6 +9,7 @@ import { supabaseService } from '../../services/supabaseService';
 import { aiService } from '../../services/aiService';
 import { ocrService } from '../../services/ocrService';
 import { useToast } from '../../components/Toast';
+import { InstallPwaButton } from '../../components/InstallPwaButton';
 
 const steps = [
   { id: 1, title: 'Pessoal', icon: User },
@@ -427,7 +427,10 @@ export const Wizard: React.FC = () => {
              <ChevronLeft className="text-zinc-400" />
              <span className="font-bold">Solicitação</span>
          </div>
-         <div className="text-sm font-medium text-[#D4AF37]">Passo {currentStep}/4</div>
+         <div className="flex items-center gap-3">
+             <InstallPwaButton className="!py-1.5 !px-3" />
+             <div className="text-sm font-medium text-[#D4AF37]">Passo {currentStep}/4</div>
+         </div>
       </div>
 
       <div className="max-w-xl mx-auto px-4 pt-6">

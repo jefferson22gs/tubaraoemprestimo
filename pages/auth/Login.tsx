@@ -4,6 +4,7 @@ import { User, Lock, ArrowRight, ShieldCheck, ScanFace, AlertCircle, Smartphone 
 import { Button } from '../../components/Button';
 import { Logo } from '../../components/Logo';
 import { supabaseService } from '../../services/supabaseService';
+import { InstallPwaButton } from '../../components/InstallPwaButton';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -12,8 +13,12 @@ export const Login: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Clear previous session on mount to ensure fresh login tests
   useEffect(() => {
+    // If we are visiting login, we usually want to ensure we are logged out
+    // or if the user is already valid, redirect to dashboard.
+    // For this specific request ("Start from Login"), we will force logout 
+    // to ensure a clean slate, unless we want to auto-redirect.
+    // Let's stick to cleaning session to behave like a true "Entry Gate".
     supabaseService.auth.signOut();
   }, []);
 
@@ -37,6 +42,8 @@ export const Login: React.FC = () => {
         } else {
           navigate('/client/dashboard');
         }
+      } else {
+        setError('Credenciais inválidas.');
       }
     } catch (error) {
       console.error(error);
@@ -87,9 +94,14 @@ export const Login: React.FC = () => {
 
       <div className="w-full max-w-md z-10">
         {/* Logo */}
-        <div className="flex flex-col items-center justify-center gap-3 mb-12">
+        <div className="flex flex-col items-center justify-center gap-3 mb-8">
              <Logo size="lg" />
              <p className="text-zinc-500 uppercase tracking-widest text-xs mt-2">Portal de Acesso</p>
+             
+             {/* Install App Button */}
+             <div className="mt-2">
+                <InstallPwaButton />
+             </div>
         </div>
 
         {/* Login Form */}
