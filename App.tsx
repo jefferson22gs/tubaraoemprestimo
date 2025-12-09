@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 
 // Pages
-// Home removed
 import { Wizard } from './pages/client/Wizard';
 import { Login } from './pages/auth/Login';
 import { ClientDashboard } from './pages/client/ClientDashboard';

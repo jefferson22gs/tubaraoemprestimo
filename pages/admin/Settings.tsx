@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, Edit2, X, Percent, Zap, Smartphone, QrCode, CheckCircle2, RotateCcw, MessageSquare, Clock, Palette, Upload, Image as ImageIcon, Building2, Settings as SettingsIcon } from 'lucide-react';
+import { Save, Plus, Trash2, Edit2, X, Percent, Zap, Smartphone, QrCode, CheckCircle2, RotateCcw, MessageSquare, Clock, Palette, Upload, Image as ImageIcon, Building2, Settings as SettingsIcon, RefreshCw, AlertCircle } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { supabaseService } from '../../services/supabaseService';
 import { whatsappService } from '../../services/whatsappService';
@@ -34,6 +34,7 @@ export const Settings: React.FC = () => {
   const [waConfig, setWaConfig] = useState<WhatsappConfig>({ apiUrl: '', apiKey: '', instanceName: '', isConnected: false });
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [loadingWa, setLoadingWa] = useState(false);
+  const [waStatus, setWaStatus] = useState<'open' | 'close' | 'connecting' | 'unknown'>('unknown');
 
   // Branding State (Local state to edit before save)
   const [localBrand, setLocalBrand] = useState(brandSettings);
@@ -58,6 +59,24 @@ export const Settings: React.FC = () => {
     setPackages(packagesData);
     setRules(rulesData);
     setWaConfig(waData);
+    
+    // Initial status check if data exists
+    if (waData.apiUrl && waData.apiKey) {
+        checkWaStatus();
+    }
+  };
+
+  const checkWaStatus = async () => {
+      const status = await whatsappService.checkConnectionState();
+      setWaStatus(status);
+      if (status === 'open') {
+          setWaConfig(prev => ({ ...prev, isConnected: true }));
+          supabaseService.saveWhatsappConfig({ ...waConfig, isConnected: true });
+          setQrCode(null);
+      } else {
+          setWaConfig(prev => ({ ...prev, isConnected: false }));
+      }
+      return status;
   };
 
   // --- Financial Handlers ---
@@ -122,29 +141,52 @@ export const Settings: React.FC = () => {
     setLoadingWa(true);
     await whatsappService.updateConfig(waConfig);
     setLoadingWa(false);
-    addToast('Configuração salva!', 'success');
+    addToast('Configuração salva! Tente conectar agora.', 'success');
   };
 
   const handleConnectWa = async () => {
+    if (!waConfig.apiUrl || !waConfig.apiKey || !waConfig.instanceName) {
+        addToast("Preencha todos os campos da API primeiro.", 'warning');
+        return;
+    }
+
     setLoadingWa(true);
-    const qr = await whatsappService.getQrCode();
-    setQrCode(qr);
-    setLoadingWa(false);
-    
-    setTimeout(async () => {
-        const updated = { ...waConfig, isConnected: true };
-        setWaConfig(updated);
-        await whatsappService.updateConfig(updated);
-        setQrCode(null);
-        addToast('WhatsApp Conectado com sucesso!', 'success');
-    }, 5000);
+    setQrCode(null);
+
+    try {
+        const qr = await whatsappService.getQrCode();
+        if (qr) {
+            setQrCode(qr); // Evolution usually returns full base64 string
+            addToast("QR Code gerado! Escaneie com seu WhatsApp.", 'success');
+        } else {
+            // Se não retornou QR, talvez já esteja conectado
+            const status = await checkWaStatus();
+            if (status === 'open') {
+                addToast("Instância já está conectada!", 'success');
+            } else {
+                addToast("Não foi possível obter o QR Code. Verifique os logs.", 'error');
+            }
+        }
+    } catch (e) {
+        addToast("Erro ao conectar com a API. Verifique URL e Chave.", 'error');
+        console.error(e);
+    } finally {
+        setLoadingWa(false);
+    }
   };
 
   const handleDisconnectWa = async () => {
-    if(confirm("Desconectar instância?")) {
-        await whatsappService.disconnect();
-        setWaConfig(prev => ({ ...prev, isConnected: false }));
-        addToast('WhatsApp desconectado.', 'info');
+    if(confirm("Deseja realmente desconectar e apagar a sessão?")) {
+        setLoadingWa(true);
+        const success = await whatsappService.disconnect();
+        if (success) {
+            setWaStatus('close');
+            setWaConfig(prev => ({ ...prev, isConnected: false }));
+            addToast('WhatsApp desconectado.', 'info');
+        } else {
+            addToast('Erro ao desconectar ou API indisponível.', 'error');
+        }
+        setLoadingWa(false);
     }
   };
 
@@ -279,23 +321,96 @@ export const Settings: React.FC = () => {
           <div className="flex-1 space-y-6">
              <div>
                 <h2 className="text-xl font-bold flex items-center gap-2 mb-2">
-                   <Smartphone size={20} className="text-green-500" /> WhatsApp API
+                   <Smartphone size={20} className="text-green-500" /> WhatsApp (Evolution API)
                 </h2>
-                <p className="text-zinc-400 text-sm">Configure a conexão com sua API local.</p>
+                <p className="text-zinc-400 text-sm">Insira os dados da sua instância Evolution API v2.</p>
              </div>
+             
              <div className="space-y-4 bg-black p-6 rounded-xl border border-zinc-800">
-                <input placeholder="API URL" value={waConfig.apiUrl} onChange={e => setWaConfig({...waConfig, apiUrl: e.target.value})} className={inputStyle} />
-                <input placeholder="API Key" type="password" value={waConfig.apiKey} onChange={e => setWaConfig({...waConfig, apiKey: e.target.value})} className={inputStyle} />
-                <input placeholder="Instance" value={waConfig.instanceName} onChange={e => setWaConfig({...waConfig, instanceName: e.target.value})} className={inputStyle} />
-                <Button onClick={handleSaveWaConfig} isLoading={loadingWa} variant="secondary" className="w-full">Salvar</Button>
+                <div>
+                    <label className="text-xs text-zinc-500 uppercase font-bold mb-1 block">API URL Base</label>
+                    <input 
+                        placeholder="https://api.seuservidor.com" 
+                        value={waConfig.apiUrl} 
+                        onChange={e => setWaConfig({...waConfig, apiUrl: e.target.value})} 
+                        className={inputStyle} 
+                    />
+                    <p className="text-[10px] text-zinc-600 mt-1">Não inclua /instance no final.</p>
+                </div>
+                <div>
+                    <label className="text-xs text-zinc-500 uppercase font-bold mb-1 block">Global API Key</label>
+                    <input 
+                        placeholder="Sua API Key Global" 
+                        type="password" 
+                        value={waConfig.apiKey} 
+                        onChange={e => setWaConfig({...waConfig, apiKey: e.target.value})} 
+                        className={inputStyle} 
+                    />
+                </div>
+                <div>
+                    <label className="text-xs text-zinc-500 uppercase font-bold mb-1 block">Nome da Instância</label>
+                    <input 
+                        placeholder="tubarao" 
+                        value={waConfig.instanceName} 
+                        onChange={e => setWaConfig({...waConfig, instanceName: e.target.value})} 
+                        className={inputStyle} 
+                    />
+                </div>
+                <Button onClick={handleSaveWaConfig} isLoading={loadingWa} variant="secondary" className="w-full">
+                    Salvar Configurações
+                </Button>
              </div>
           </div>
+
           <div className="w-full md:w-96 flex flex-col items-center justify-center p-6 bg-black rounded-xl border border-zinc-800">
-             {!waConfig.isConnected && !qrCode && <Button onClick={handleConnectWa} isLoading={loadingWa}>Gerar QR Code</Button>}
-             {waConfig.isConnected && <div className="text-green-500 font-bold"><CheckCircle2 size={48}/> CONECTADO</div>}
-             {qrCode && <img src={qrCode} alt="QR" className="w-48 h-48 bg-white p-2 rounded" />}
-             {waConfig.isConnected && (
-                <Button onClick={handleDisconnectWa} variant="danger" className="mt-4">Desconectar</Button>
+             
+             {/* Status Badge */}
+             <div className="mb-6 flex items-center gap-2">
+                 <div className={`w-3 h-3 rounded-full ${waStatus === 'open' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                 <span className="text-sm font-mono uppercase text-zinc-400">Status: {waStatus}</span>
+                 <button onClick={checkWaStatus} className="ml-2 p-1 hover:bg-zinc-800 rounded-full text-zinc-500" title="Verificar Agora">
+                    <RefreshCw size={14} />
+                 </button>
+             </div>
+
+             {/* Connection Logic */}
+             {waStatus === 'open' ? (
+                 <div className="flex flex-col items-center animate-in zoom-in">
+                     <CheckCircle2 size={64} className="text-green-500 mb-4" />
+                     <h3 className="text-xl font-bold text-white mb-1">WhatsApp Conectado</h3>
+                     <p className="text-zinc-500 text-sm text-center mb-6">A automação está ativa e enviando mensagens.</p>
+                     
+                     <Button onClick={handleDisconnectWa} variant="danger" isLoading={loadingWa} className="w-full">
+                        Desconectar Instância
+                     </Button>
+                 </div>
+             ) : (
+                 <div className="flex flex-col items-center w-full">
+                     {!qrCode ? (
+                         <>
+                             <QrCode size={48} className="text-zinc-600 mb-4 opacity-50" />
+                             <p className="text-zinc-400 text-sm text-center mb-6">Salve as configurações e clique abaixo para gerar o QR Code.</p>
+                             <Button onClick={handleConnectWa} isLoading={loadingWa} className="w-full bg-green-600 hover:bg-green-700 border-none text-white">
+                                 Conectar / Gerar QR
+                             </Button>
+                         </>
+                     ) : (
+                         <div className="flex flex-col items-center animate-in fade-in">
+                             <div className="bg-white p-2 rounded-lg mb-4">
+                                 <img src={qrCode} alt="QR Code" className="w-48 h-48 object-contain" />
+                             </div>
+                             <p className="text-xs text-zinc-500 mb-4 text-center max-w-[200px]">Abra o WhatsApp > Aparelhos Conectados > Conectar Aparelho</p>
+                             <div className="flex gap-2 w-full">
+                                <Button onClick={checkWaStatus} variant="secondary" className="flex-1">
+                                    Já Escaniei
+                                </Button>
+                                <Button onClick={() => setQrCode(null)} variant="outline" className="flex-1">
+                                    Cancelar
+                                </Button>
+                             </div>
+                         </div>
+                     )}
+                 </div>
              )}
           </div>
        </div>
