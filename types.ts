@@ -210,3 +210,192 @@ export interface GoalsSettings {
   // Período da meta
   goalPeriod: string;  // Ex: "12/2024"
 }
+
+// --- BLACKLIST ---
+export interface BlacklistEntry {
+  id: string;
+  cpf: string;
+  name: string;
+  reason: string;
+  addedBy: string;
+  addedAt: string;
+  active: boolean;
+}
+
+// --- AUDIT LOG ---
+export interface AuditLog {
+  id: string;
+  userId: string;
+  userName: string;
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'APPROVE' | 'REJECT' | 'LOGIN' | 'LOGOUT' | 'VIEW' | 'EXPORT' | 'SEND_MESSAGE';
+  entity: string;  // Ex: 'LOAN_REQUEST', 'CUSTOMER', 'SETTINGS'
+  entityId?: string;
+  details: string;
+  ipAddress?: string;
+  timestamp: string;
+}
+
+// --- USER PERMISSIONS ---
+export type PermissionLevel = 'ADMIN' | 'MANAGER' | 'OPERATOR' | 'VIEWER';
+
+export interface UserPermission {
+  userId: string;
+  level: PermissionLevel;
+  permissions: {
+    canApproveLoans: boolean;
+    canRejectLoans: boolean;
+    canViewReports: boolean;
+    canExportData: boolean;
+    canManageUsers: boolean;
+    canManageSettings: boolean;
+    canSendMessages: boolean;
+    canViewCustomers: boolean;
+    canEditCustomers: boolean;
+    canViewFinancials: boolean;
+  };
+}
+
+// --- CLIENT SCORE ---
+export interface ClientScore {
+  customerId: string;
+  score: number;  // 0-1000
+  level: 'EXCELLENT' | 'GOOD' | 'REGULAR' | 'BAD' | 'CRITICAL';
+  factors: {
+    paymentHistory: number;      // Histórico de pagamentos
+    onTimePayments: number;      // Pagamentos em dia
+    latePayments: number;        // Pagamentos atrasados
+    averageDelayDays: number;    // Média de dias de atraso
+    totalLoans: number;          // Total de empréstimos
+    activeLoans: number;         // Empréstimos ativos
+    defaultedLoans: number;      // Empréstimos inadimplentes
+    relationshipMonths: number;  // Tempo de relacionamento
+  };
+  suggestedLimit: number;
+  lastUpdate: string;
+}
+
+// --- RENEGOTIATION ---
+export interface RenegotiationProposal {
+  id: string;
+  customerId: string;
+  customerName: string;
+  originalLoanId: string;
+  originalAmount: number;
+  remainingAmount: number;
+  daysOverdue: number;
+  proposal: {
+    newAmount: number;
+    discount: number;
+    discountPercent: number;
+    newInstallments: number;
+    newInstallmentValue: number;
+    interestRate: number;
+  };
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
+  createdAt: string;
+  expiresAt: string;
+  acceptedAt?: string;
+}
+
+// --- MESSAGE TEMPLATES ---
+export interface MessageTemplate {
+  id: string;
+  name: string;
+  category: 'REMINDER' | 'COLLECTION' | 'WELCOME' | 'APPROVAL' | 'REJECTION' | 'PAYMENT' | 'CUSTOM';
+  content: string;
+  variables: string[];  // Ex: ['{nome}', '{valor}', '{vencimento}']
+  isActive: boolean;
+  createdAt: string;
+}
+
+// --- MASS MESSAGE ---
+export interface MassMessage {
+  id: string;
+  templateId?: string;
+  message: string;
+  recipients: string[];  // Customer IDs
+  sentCount: number;
+  failedCount: number;
+  status: 'PENDING' | 'SENDING' | 'COMPLETED' | 'FAILED';
+  createdAt: string;
+  completedAt?: string;
+}
+
+// --- CONVERSATION HISTORY ---
+export interface ConversationMessage {
+  id: string;
+  customerId: string;
+  direction: 'IN' | 'OUT';
+  channel: 'WHATSAPP' | 'EMAIL' | 'SMS' | 'APP';
+  content: string;
+  sentBy?: string;
+  timestamp: string;
+  status: 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
+}
+
+// --- CONTRACT TEMPLATE ---
+export interface ContractTemplate {
+  id: string;
+  name: string;
+  content: string;  // HTML template
+  variables: string[];
+  isDefault: boolean;
+  createdAt: string;
+}
+
+// --- RECEIPT ---
+export interface Receipt {
+  id: string;
+  customerId: string;
+  customerName: string;
+  loanId: string;
+  installmentId: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: 'PIX' | 'BOLETO' | 'CASH' | 'TRANSFER';
+  generatedAt: string;
+}
+
+// --- DISCHARGE DECLARATION ---
+export interface DischargeDeclaration {
+  id: string;
+  customerId: string;
+  customerName: string;
+  cpf: string;
+  loanId: string;
+  originalAmount: number;
+  totalPaid: number;
+  startDate: string;
+  endDate: string;
+  generatedAt: string;
+}
+
+// --- FINANCIAL SUMMARY ---
+export interface FinancialSummary {
+  period: string;
+  revenue: number;
+  expenses: number;
+  profit: number;
+  loansDisbursed: number;
+  paymentsReceived: number;
+  defaultedAmount: number;
+  cashFlow: {
+    date: string;
+    inflow: number;
+    outflow: number;
+    balance: number;
+  }[];
+}
+
+// --- CALENDAR EVENT ---
+export interface CalendarEvent {
+  id: string;
+  type: 'INSTALLMENT' | 'LOAN_START' | 'LOAN_END' | 'REMINDER';
+  title: string;
+  date: string;
+  customerId?: string;
+  customerName?: string;
+  amount?: number;
+  status: 'PENDING' | 'PAID' | 'OVERDUE';
+  loanId?: string;
+}
