@@ -17,6 +17,7 @@ import { Customers } from './pages/admin/Customers';
 import { Interactions } from './pages/admin/Interactions';
 import { Users as UsersPage } from './pages/admin/Users';
 import { Marketing } from './pages/admin/Marketing';
+import { Reports } from './pages/admin/Reports';
 import { DemoSimulator } from './pages/public/DemoSimulator';
 
 // Components
@@ -25,7 +26,8 @@ import { BottomNav } from './components/BottomNav';
 import { SplashScreen } from './components/SplashScreen';
 import { InstallPrompt } from './components/InstallPrompt';
 import { ToastProvider } from './components/Toast';
-import { LayoutDashboard, FileText, Settings as SettingsIcon, LogOut, Users, Bot, Menu, X, UserCog, Home as HomeIcon, PieChart, User as UserIcon, Megaphone } from 'lucide-react';
+import { NotificationCenter } from './components/NotificationCenter';
+import { LayoutDashboard, FileText, Settings as SettingsIcon, LogOut, Users, Bot, Menu, X, UserCog, Home as HomeIcon, PieChart, User as UserIcon, Megaphone, BarChart3 } from 'lucide-react';
 import { Logo } from './components/Logo';
 import { supabaseService } from './services/supabaseService';
 import { BrandProvider, useBrand } from './contexts/BrandContext';
@@ -36,7 +38,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
+
   const isActive = (path: string) => location.pathname === path ? 'text-[#D4AF37] bg-zinc-800' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50';
   const user = supabaseService.auth.getUser();
 
@@ -46,13 +48,17 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const NavContent = () => (
     <>
-      <div className="p-6 border-b border-zinc-800 flex justify-center shrink-0">
+      <div className="p-6 border-b border-zinc-800 flex justify-between items-center shrink-0">
         <Logo size="sm" />
+        <div className="hidden md:block">
+          <NotificationCenter />
+        </div>
       </div>
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin')}`}><LayoutDashboard size={20} /> Dashboard</Link>
         <Link to="/admin/requests" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/requests')}`}><FileText size={20} /> Solicitações</Link>
         <Link to="/admin/customers" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/customers')}`}><Users size={20} /> Clientes</Link>
+        <Link to="/admin/reports" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/reports')}`}><BarChart3 size={20} /> Relatórios</Link>
         <Link to="/admin/marketing" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/marketing')}`}><Megaphone size={20} /> Marketing</Link>
         <Link to="/admin/users" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/users')}`}><UserCog size={20} /> Acessos</Link>
         <Link to="/admin/interactions" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/admin/interactions')}`}><Bot size={20} /> IA Logs</Link>
@@ -71,9 +77,12 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <div className="flex items-center gap-2">
           <Logo size="sm" />
         </div>
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-zinc-400 hover:text-white">
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        <div className="flex items-center gap-2">
+          <NotificationCenter />
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-zinc-400 hover:text-white">
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
       </div>
 
       {/* Desktop Sidebar */}
@@ -103,7 +112,7 @@ const ClientLayout: React.FC<{ children: React.ReactNode; showNav?: boolean; sho
   const location = useLocation();
   const navigate = useNavigate();
   const [isClientMenuOpen, setIsClientMenuOpen] = useState(false);
-  
+
   const isDemoMode = location.pathname.includes('/demo');
   const isPublicRoute = ['/login', '/wizard', '/demo'].includes(location.pathname);
 
@@ -172,12 +181,12 @@ const ClientLayout: React.FC<{ children: React.ReactNode; showNav?: boolean; sho
               </button>
               <Link to={user ? "/client/dashboard" : "/login"}><Logo size="sm" /></Link>
             </div>
-            
+
             <div className="flex items-center gap-4">
               {user ? (
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-zinc-400 hidden md:block">Olá, {user.name.split(' ')[0]}</span>
-                  <Link to="/client/profile" className="w-8 h-8 rounded-full bg-[#D4AF37] flex items-center justify-center text-black font-bold text-xs">{user.name.substring(0,2).toUpperCase()}</Link>
+                  <Link to="/client/profile" className="w-8 h-8 rounded-full bg-[#D4AF37] flex items-center justify-center text-black font-bold text-xs">{user.name.substring(0, 2).toUpperCase()}</Link>
                 </div>
               ) : (
                 <>
@@ -189,7 +198,7 @@ const ClientLayout: React.FC<{ children: React.ReactNode; showNav?: boolean; sho
           </div>
         </nav>
       )}
-      
+
       <div className={showNav ? 'pt-16' : ''}>{children}</div>
       {showBottomNav && <BottomNav />}
       <Chatbot />
@@ -216,12 +225,12 @@ export default function App() {
           <Routes>
             {/* Redirect Root to Login */}
             <Route path="/" element={<Navigate to="/login" replace />} />
-            
+
             {/* Auth / Public */}
             <Route path="/login" element={<Login />} />
             <Route path="/wizard" element={<ClientLayout><Wizard /></ClientLayout>} />
             <Route path="/demo" element={<DemoSimulator />} />
-            
+
             {/* Client Protected */}
             {/* Set showNav={false} for Dashboard to avoid double headers */}
             <Route path="/client/dashboard" element={<ClientLayout showNav={false} showBottomNav={true}><ClientDashboard /></ClientLayout>} />
@@ -229,11 +238,12 @@ export default function App() {
             <Route path="/client/profile" element={<ClientLayout showNav={true} showBottomNav={true}><Profile /></ClientLayout>} />
             <Route path="/client/statement" element={<ClientLayout showNav={true} showBottomNav={true}><Statement /></ClientLayout>} />
             <Route path="/client/help" element={<ClientLayout showNav={true} showBottomNav={true}><HelpCenter /></ClientLayout>} />
-            
+
             {/* Admin Protected */}
             <Route path="/admin" element={<AdminLayout><Dashboard /></AdminLayout>} />
             <Route path="/admin/requests" element={<AdminLayout><Requests /></AdminLayout>} />
             <Route path="/admin/customers" element={<AdminLayout><Customers /></AdminLayout>} />
+            <Route path="/admin/reports" element={<AdminLayout><Reports /></AdminLayout>} />
             <Route path="/admin/marketing" element={<AdminLayout><Marketing /></AdminLayout>} />
             <Route path="/admin/users" element={<AdminLayout><UsersPage /></AdminLayout>} />
             <Route path="/admin/interactions" element={<AdminLayout><Interactions /></AdminLayout>} />
