@@ -38,12 +38,12 @@ export interface LoanRequest {
   clientName: string;
   cpf: string;
   email: string;
-  phone: string; 
+  phone: string;
   amount: number;
   installments: number;
   status: LoanStatus;
   date: string;
-  
+
   // New References
   references: {
     fatherPhone: string;
@@ -58,13 +58,13 @@ export interface LoanRequest {
     proofOfAddressUrl?: string | string[];
     proofIncomeUrl?: string | string[];
     vehicleUrl?: string | string[];
-    
+
     // New Videos
     videoSelfieUrl?: string;
     videoHouseUrl?: string;
     videoVehicleUrl?: string;
   };
-  
+
   // Supplemental Document Request
   supplementalInfo?: {
     requestedAt?: string;
@@ -95,7 +95,7 @@ export interface BrandSettings {
   primaryColor: string;
   secondaryColor: string;
   backgroundColor: string;
-  
+
   // Company Info
   companyName: string;
   cnpj: string;
@@ -114,7 +114,7 @@ export interface Customer {
   totalDebt: number;
   activeLoansCount: number;
   joinedAt: string;
-  
+
   // New Pre-approval field
   preApprovedOffer?: {
     amount: number;
@@ -126,7 +126,7 @@ export type CollectionRuleType = 'WHATSAPP' | 'EMAIL' | 'SMS';
 
 export interface CollectionRule {
   id: string;
-  daysOffset: number; 
+  daysOffset: number;
   type: CollectionRuleType;
   messageTemplate: string;
   active: boolean;
@@ -138,8 +138,8 @@ export interface Installment {
   amount: number;
   status: 'OPEN' | 'PAID' | 'LATE';
   pixCode?: string;
-  proofUrl?: string; 
-  paidAt?: string;   
+  proofUrl?: string;
+  paidAt?: string;
 }
 
 export interface Loan {
@@ -154,7 +154,7 @@ export interface Loan {
 
 export interface Transaction {
   id: string;
-  type: 'IN' | 'OUT'; 
+  type: 'IN' | 'OUT';
   description: string;
   amount: number;
   date: string;
@@ -189,4 +189,24 @@ export interface Campaign {
   frequency: 'ONCE' | 'DAILY' | 'ALWAYS';
   active: boolean;
   priority: number; // Higher shows first
+}
+
+// --- GOALS & PROJECTIONS ---
+export interface GoalsSettings {
+  // Metas do mês atual
+  monthlyLoanGoal: number;           // Meta de volume emprestado
+  monthlyClientGoal: number;         // Meta de novos clientes
+  monthlyApprovalRateGoal: number;   // Meta de taxa de aprovação (%)
+
+  // Projeções anuais (por mês)
+  projections: {
+    month: string;   // Ex: "Jan", "Fev", etc
+    target: number;  // Valor projetado
+  }[];
+
+  // Crescimento esperado
+  expectedGrowthRate: number;  // % de crescimento mensal esperado
+
+  // Período da meta
+  goalPeriod: string;  // Ex: "12/2024"
 }

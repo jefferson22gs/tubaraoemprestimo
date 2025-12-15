@@ -13,7 +13,7 @@ import {
     Calendar, RefreshCw, Percent
 } from 'lucide-react';
 import { supabaseService } from '../services/supabaseService';
-import { LoanStatus } from '../types';
+import { LoanStatus, GoalsSettings } from '../types';
 
 interface KPIData {
     totalLent: number;
@@ -79,6 +79,7 @@ export const AdvancedKPIs: React.FC = () => {
         projectedRevenue: 0,
         monthlyGrowth: 0
     });
+    const [goals, setGoals] = useState<GoalsSettings | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -88,9 +89,14 @@ export const AdvancedKPIs: React.FC = () => {
     const loadKPIs = async () => {
         setLoading(true);
         try {
-            const requests = await supabaseService.getRequests();
-            const customers = await supabaseService.getCustomers();
-            const loans = await supabaseService.getClientLoans();
+            const [requests, customers, loans, goalsData] = await Promise.all([
+                supabaseService.getRequests(),
+                supabaseService.getCustomers(),
+                supabaseService.getClientLoans(),
+                supabaseService.getGoalsSettings()
+            ]);
+
+            setGoals(goalsData);
 
             const approved = requests.filter(r => r.status === LoanStatus.APPROVED);
             const rejected = requests.filter(r => r.status === LoanStatus.REJECTED);
@@ -110,6 +116,9 @@ export const AdvancedKPIs: React.FC = () => {
                 });
             });
 
+            // Calculate projected revenue from goals
+            const projectedRevenue = goalsData.projections.reduce((acc, p) => acc + p.target, 0) / 12;
+
             setKpis({
                 totalLent: totalLent || 534000,
                 totalReceived: totalReceived || 425000,
@@ -121,8 +130,8 @@ export const AdvancedKPIs: React.FC = () => {
                 defaultRate: totalLent > 0 ? Number(((lateAmount / totalLent) * 100).toFixed(1)) : 2.3,
                 avgLoanAmount: approved.length > 0 ? Math.round(totalLent / approved.length) : 5500,
                 avgInstallments: 12,
-                projectedRevenue: 195000,
-                monthlyGrowth: 12.5
+                projectedRevenue: projectedRevenue || 195000,
+                monthlyGrowth: goalsData.expectedGrowthRate || 12.5
             });
         } catch (error) {
             console.error('Error loading KPIs:', error);
@@ -242,10 +251,14 @@ export const AdvancedKPIs: React.FC = () => {
                         <Zap className="text-purple-400" size={20} />
                         Projeção de Receita
                     </h3>
-                    <p className="text-zinc-500 text-sm mb-6">Baseado no crescimento atual</p>
+                    <p className="text-zinc-500 text-sm mb-6">Configurado em Configurações &gt; Metas</p>
                     <div className="h-[280px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={projectionData}>
+                            <LineChart data={goals?.projections.map((p, i) => ({
+                                name: p.month,
+                                projetado: p.target,
+                                real: i < 7 ? monthlyData[i]?.emprestado : null
+                            })) || projectionData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
                                 <XAxis dataKey="name" stroke="#666" axisLine={false} tickLine={false} />
                                 <YAxis stroke="#666" axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}K`} />
@@ -254,7 +267,7 @@ export const AdvancedKPIs: React.FC = () => {
                                     formatter={(value: number) => value ? [`R$ ${value.toLocaleString()}`, ''] : ['-', '']}
                                 />
                                 <Line type="monotone" dataKey="real" stroke="#D4AF37" strokeWidth={3} dot={{ fill: '#D4AF37', r: 6 }} name="Real" />
-                                <Line type="monotone" dataKey="projetado" stroke="#8B5CF6" strokeWidth={2} strokeDasharray="5 5" dot={{ fill: '#8B5CF6', r: 4 }} name="Projetado" />
+                                <Line type="monotone" dataKey="projetado" stroke="#8B5CF6" strokeWidth={2} strokeDasharray="5 5" dot={{ fill: '#8B5CF6', r: 4 }} name="Meta" />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -305,10 +318,10 @@ export const AdvancedKPIs: React.FC = () => {
                             <span className="text-[#D4AF37] font-bold">8.5%</span>
                         </div>
                     </div>
-                </div>
+                </div >
 
                 {/* Distribuição de Status */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+                < div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6" >
                     <h3 className="text-lg font-bold text-white mb-6">Status dos Empréstimos</h3>
                     <div className="h-[200px]">
                         <ResponsiveContainer width="100%" height="100%">
@@ -342,10 +355,10 @@ export const AdvancedKPIs: React.FC = () => {
                             </div>
                         ))}
                     </div>
-                </div>
+                </div >
 
                 {/* Crescimento de Clientes */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+                < div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6" >
                     <h3 className="text-lg font-bold text-white mb-6">Novos Clientes</h3>
                     <div className="h-[200px]">
                         <ResponsiveContainer width="100%" height="100%">
@@ -372,38 +385,38 @@ export const AdvancedKPIs: React.FC = () => {
                             </p>
                         </div>
                     </div>
-                </div>
-            </div>
+                </div >
+            </div >
 
             {/* Meta vs Realizado */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+            < div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6" >
                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                     <Target className="text-[#D4AF37]" size={20} />
-                    Meta vs Realizado - Dezembro 2024
+                    Meta vs Realizado - {goals?.goalPeriod || 'Dezembro 2024'}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <GoalProgress
                         label="Volume Emprestado"
-                        current={534000}
-                        goal={600000}
+                        current={kpis.totalLent}
+                        goal={goals?.monthlyLoanGoal || 600000}
                         color="#D4AF37"
                     />
                     <GoalProgress
                         label="Novos Clientes"
-                        current={48}
-                        goal={60}
+                        current={kpis.activeClients}
+                        goal={goals?.monthlyClientGoal || 60}
                         color="#3B82F6"
                     />
                     <GoalProgress
                         label="Taxa de Aprovação"
-                        current={72}
-                        goal={75}
+                        current={kpis.approvalRate}
+                        goal={goals?.monthlyApprovalRateGoal || 75}
                         color="#22C55E"
                         isPercentage
                     />
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 
