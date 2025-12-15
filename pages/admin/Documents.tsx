@@ -58,16 +58,29 @@ export const DocumentsPage: React.FC = () => {
     }, []);
 
     const loadData = async () => {
-        const [customersData, loansData] = await Promise.all([
-            supabaseService.getCustomers(),
-            supabaseService.getClientLoans()
-        ]);
-        setCustomers(customersData);
-        setLoans(loansData);
-        setDocuments(contractService.getDocuments());
-        setTemplates(contractService.getTemplates());
-        setReceipts(documentService.getReceipts());
-        setDeclarations(documentService.getDeclarations());
+        try {
+            const [customersData, loansData] = await Promise.all([
+                supabaseService.getCustomers(),
+                supabaseService.getClientLoans()
+            ]);
+            setCustomers(Array.isArray(customersData) ? customersData : []);
+            setLoans(Array.isArray(loansData) ? loansData : []);
+
+            const docs = contractService.getDocuments();
+            setDocuments(Array.isArray(docs) ? docs : []);
+
+            const temps = contractService.getTemplates();
+            setTemplates(Array.isArray(temps) ? temps : []);
+
+            const recs = documentService.getReceipts();
+            setReceipts(Array.isArray(recs) ? recs : []);
+
+            const decls = documentService.getDeclarations();
+            setDeclarations(Array.isArray(decls) ? decls : []);
+        } catch (error) {
+            console.error("Erro ao carregar dados:", error);
+            addToast("Erro ao carregar dados", "error");
+        }
     };
 
     const handleGenerateContract = () => {
@@ -172,9 +185,10 @@ export const DocumentsPage: React.FC = () => {
             customerId: customer.id,
             customerName: customer.name,
             amount: parseFloat(receiptAmount),
-            paymentMethod: receiptMethod as 'PIX' | 'TRANSFERENCIA' | 'DINHEIRO' | 'BOLETO',
-            installmentNumber: 1,
-            reference: `PAG-${Date.now()}`
+            paymentMethod: (receiptMethod === 'DINHEIRO' ? 'CASH' : receiptMethod === 'TRANSFERENCIA' ? 'TRANSFER' : receiptMethod) as any,
+            loanId: 'AVULSO',
+            installmentId: 'AVULSO',
+            paymentDate: new Date().toISOString()
         });
         addToast('Recibo gerado com sucesso!', 'success');
         setIsReceiptModalOpen(false);
@@ -184,14 +198,14 @@ export const DocumentsPage: React.FC = () => {
     };
 
     const handlePreviewReceipt = (receipt: Receipt) => {
-        const html = documentService.getReceiptHTML(receipt, brandSettings);
+        const html = documentService.receiptToHTML(receipt, brandSettings);
         setPreviewHTML(html);
         setPreviewDoc(null);
         setIsPreviewOpen(true);
     };
 
     const handleDownloadReceipt = (receipt: Receipt) => {
-        const html = documentService.getReceiptHTML(receipt, brandSettings);
+        const html = documentService.receiptToHTML(receipt, brandSettings);
         const blob = new Blob([html], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -210,13 +224,15 @@ export const DocumentsPage: React.FC = () => {
             addToast('Selecione cliente e empréstimo', 'warning');
             return;
         }
-        const declaration = documentService.generateDischargeDeclaration({
+        const declaration = documentService.generateDischarge({
             customerId: customer.id,
             customerName: customer.name,
             cpf: customer.cpf,
             loanId: loan.id,
             originalAmount: loan.amount,
-            totalPaid: loan.amount
+            totalPaid: loan.amount,
+            startDate: loan.startDate,
+            endDate: new Date().toISOString()
         });
         addToast('Declaração gerada com sucesso!', 'success');
         setIsDeclarationModalOpen(false);
@@ -226,14 +242,14 @@ export const DocumentsPage: React.FC = () => {
     };
 
     const handlePreviewDeclaration = (decl: DischargeDeclaration) => {
-        const html = documentService.getDeclarationHTML(decl, brandSettings);
+        const html = documentService.dischargeToHTML(decl, brandSettings);
         setPreviewHTML(html);
         setPreviewDoc(null);
         setIsPreviewOpen(true);
     };
 
     const handleDownloadDeclaration = (decl: DischargeDeclaration) => {
-        const html = documentService.getDeclarationHTML(decl, brandSettings);
+        const html = documentService.dischargeToHTML(decl, brandSettings);
         const blob = new Blob([html], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -839,6 +855,114 @@ export const DocumentsPage: React.FC = () => {
                                 title="Document Preview"
                                 style={{ border: 'none' }}
                             />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Receipt Modal */}
+            {isReceiptModalOpen && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg p-6 animate-in zoom-in duration-200">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold text-[#D4AF37] flex items-center gap-2">
+                                <ReceiptIcon size={24} /> Gerar Recibo
+                            </h2>
+                            <button onClick={() => setIsReceiptModalOpen(false)} className="text-zinc-500 hover:text-white">
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm text-zinc-400 mb-2">Cliente</label>
+                                <select
+                                    value={receiptCustomerId}
+                                    onChange={(e) => setReceiptCustomerId(e.target.value)}
+                                    className="w-full bg-black border border-zinc-700 rounded-lg p-3 text-white focus:border-[#D4AF37] outline-none"
+                                >
+                                    <option value="">Selecione um cliente</option>
+                                    {customers.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name} - {c.cpf}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm text-zinc-400 mb-2">Valor (R$)</label>
+                                <input
+                                    type="number"
+                                    value={receiptAmount}
+                                    onChange={(e) => setReceiptAmount(e.target.value)}
+                                    className="w-full bg-black border border-zinc-700 rounded-lg p-3 text-white focus:border-[#D4AF37] outline-none"
+                                    placeholder="0.00"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm text-zinc-400 mb-2">Forma de Pagamento</label>
+                                <select
+                                    value={receiptMethod}
+                                    onChange={(e) => setReceiptMethod(e.target.value)}
+                                    className="w-full bg-black border border-zinc-700 rounded-lg p-3 text-white focus:border-[#D4AF37] outline-none"
+                                >
+                                    <option value="PIX">PIX</option>
+                                    <option value="DINHEIRO">Dinheiro</option>
+                                    <option value="TRANSFERENCIA">Transferência</option>
+                                    <option value="BOLETO">Boleto</option>
+                                </select>
+                            </div>
+                            <Button onClick={handleGenerateReceipt} className="w-full mt-4">
+                                <ReceiptIcon size={18} /> Confirmar Geração
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Declaration Modal */}
+            {isDeclarationModalOpen && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg p-6 animate-in zoom-in duration-200">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold text-[#D4AF37] flex items-center gap-2">
+                                <Award size={24} /> Gerar Declaração de Quitação
+                            </h2>
+                            <button onClick={() => setIsDeclarationModalOpen(false)} className="text-zinc-500 hover:text-white">
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm text-zinc-400 mb-2">Cliente</label>
+                                <select
+                                    value={declarationCustomerId}
+                                    onChange={(e) => { setDeclarationCustomerId(e.target.value); setDeclarationLoanId(''); }}
+                                    className="w-full bg-black border border-zinc-700 rounded-lg p-3 text-white focus:border-[#D4AF37] outline-none"
+                                >
+                                    <option value="">Selecione um cliente</option>
+                                    {customers.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name} - {c.cpf}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            {declarationCustomerId && (
+                                <div>
+                                    <label className="block text-sm text-zinc-400 mb-2">Empréstimo Quitado</label>
+                                    <select
+                                        value={declarationLoanId}
+                                        onChange={(e) => setDeclarationLoanId(e.target.value)}
+                                        className="w-full bg-black border border-zinc-700 rounded-lg p-3 text-white focus:border-[#D4AF37] outline-none"
+                                    >
+                                        <option value="">Selecione um empréstimo</option>
+                                        {loans.map(l => (
+                                            <option key={l.id} value={l.id}>
+                                                R$ {l.amount.toLocaleString()} ({new Date(l.startDate).toLocaleDateString()}) - Restante: R$ {l.remainingAmount}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                            <Button onClick={handleGenerateDeclaration} className="w-full mt-4">
+                                <Award size={18} /> Gerar Declaração
+                            </Button>
                         </div>
                     </div>
                 </div>
