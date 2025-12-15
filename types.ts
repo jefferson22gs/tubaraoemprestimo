@@ -115,11 +115,99 @@ export interface Customer {
   activeLoansCount: number;
   joinedAt: string;
 
+  // Geolocation fields
+  address?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  latitude?: number;
+  longitude?: number;
+
+  // Monthly income for credit analysis
+  monthlyIncome?: number;
+
   // New Pre-approval field
   preApprovedOffer?: {
     amount: number;
     createdAt: string;
   };
+}
+
+// ==================== GEOLOCATION TYPES ====================
+
+export interface GeoCluster {
+  id: string;
+  neighborhood: string;
+  city: string;
+  center: { lat: number; lng: number };
+  customerCount: number;
+  defaultRate: number; // % of defaulted customers in this cluster
+  totalDebt: number;
+  customers: Customer[];
+}
+
+export interface RouteStop {
+  order: number;
+  customer: Customer;
+  distance: number; // km from previous stop
+  estimatedTime: number; // minutes
+}
+
+export interface CollectionRoute {
+  id: string;
+  name: string;
+  date: string;
+  stops: RouteStop[];
+  totalDistance: number;
+  totalTime: number;
+  status: 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED';
+}
+
+// ==================== OPEN FINANCE TYPES ====================
+
+export interface CreditScore {
+  id: string;
+  customerId: string;
+  score: number; // 0-1000
+  classification: 'A' | 'B' | 'C' | 'D' | 'E';
+  source: 'INTERNAL' | 'SERASA' | 'SPC';
+  consultedAt: string;
+  factors: {
+    paymentHistory: number; // 0-100
+    debtRatio: number; // 0-100
+    creditAge: number; // 0-100
+    recentInquiries: number; // 0-100
+  };
+  restrictions?: {
+    hasRestriction: boolean;
+    type?: string;
+    value?: number;
+    origin?: string;
+  };
+}
+
+export interface IncomeAnalysis {
+  id: string;
+  customerId: string;
+  analyzedAt: string;
+  monthlyIncome: number;
+  averageBalance: number;
+  incomeSource: 'SALARY' | 'BUSINESS' | 'FREELANCE' | 'OTHER';
+  stability: 'HIGH' | 'MEDIUM' | 'LOW';
+  currentCommitment: number; // % of income already committed
+  availableCommitment: number; // % available for new loans
+  maxLoanAmount: number;
+  recommendation: 'APPROVE' | 'REVIEW' | 'DENY';
+}
+
+export interface OpenFinanceConsent {
+  id: string;
+  customerId: string;
+  grantedAt: string;
+  expiresAt: string;
+  scope: ('ACCOUNTS' | 'TRANSACTIONS' | 'CREDIT')[];
+  status: 'ACTIVE' | 'EXPIRED' | 'REVOKED';
 }
 
 export type CollectionRuleType = 'WHATSAPP' | 'EMAIL' | 'SMS';
