@@ -10,6 +10,7 @@ import { Contracts } from './pages/client/Contracts';
 import { Profile } from './pages/client/Profile';
 import { Statement } from './pages/client/Statement';
 import { HelpCenter } from './pages/client/HelpCenter';
+import { MyDocuments } from './pages/client/MyDocuments';
 
 // Pages - Admin Core
 import { Dashboard } from './pages/admin/Dashboard';
@@ -177,6 +178,9 @@ const ClientLayout: React.FC<{ children: React.ReactNode; showNav?: boolean; sho
             <Link to="/client/contracts" onClick={() => setIsClientMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/client/contracts')}`}>
               <FileText size={20} /> Meus Contratos
             </Link>
+            <Link to="/client/documents" onClick={() => setIsClientMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/client/documents')}`}>
+              <FileCheck size={20} /> Meus Documentos
+            </Link>
             <Link to="/client/statement" onClick={() => setIsClientMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive('/client/statement')}`}>
               <PieChart size={20} /> Extrato
             </Link>
@@ -279,6 +283,7 @@ export default function App() {
             <Route path="/client/profile" element={<ClientLayout showNav={true} showBottomNav={true}><Profile /></ClientLayout>} />
             <Route path="/client/statement" element={<ClientLayout showNav={true} showBottomNav={true}><Statement /></ClientLayout>} />
             <Route path="/client/help" element={<ClientLayout showNav={true} showBottomNav={true}><HelpCenter /></ClientLayout>} />
+            <Route path="/client/documents" element={<ClientLayout showNav={true} showBottomNav={true}><MyDocuments /></ClientLayout>} />
 
             {/* Admin Protected - Core */}
             <Route path="/admin" element={<AdminLayout><Dashboard /></AdminLayout>} />
