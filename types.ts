@@ -399,3 +399,26 @@ export interface CalendarEvent {
   status: 'PENDING' | 'PAID' | 'OVERDUE';
   loanId?: string;
 }
+
+export interface ReferralCode {
+  id: string;
+  userId: string;
+  userName: string;
+  code: string; // Ex: IND-JOAO-123
+  createdAt: string;
+  status: 'ACTIVE' | 'BLOCKED';
+  usageCount: number;
+}
+
+export interface ReferralUsage {
+  id: string;
+  referralCode: string;
+  referrerId: string; // Quem indicou
+  referredId: string; // Quem usou o código (novo usuário)
+  referredName: string;
+  status: 'PENDING' | 'VALIDATED' | 'FRAUD_SUSPECTED' | 'REJECTED';
+  rewardAmount: number;
+  createdAt: string;
+  validatedAt?: string;
+  fraudReason?: string;
+}

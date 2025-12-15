@@ -29,8 +29,17 @@ export const DocumentsPage: React.FC = () => {
     const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+    const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+    const [isDeclarationModalOpen, setIsDeclarationModalOpen] = useState(false);
     const [previewHTML, setPreviewHTML] = useState<string>('');
     const [previewDoc, setPreviewDoc] = useState<GeneratedDocument | null>(null);
+
+    // Receipt/Declaration form states
+    const [receiptCustomerId, setReceiptCustomerId] = useState('');
+    const [receiptAmount, setReceiptAmount] = useState('');
+    const [receiptMethod, setReceiptMethod] = useState('PIX');
+    const [declarationCustomerId, setDeclarationCustomerId] = useState('');
+    const [declarationLoanId, setDeclarationLoanId] = useState('');
 
     // Form states
     const [selectedCustomerId, setSelectedCustomerId] = useState('');
@@ -150,6 +159,89 @@ export const DocumentsPage: React.FC = () => {
         const allContent = sections.map(s => s.content).join(' ');
         const matches = allContent.match(/\{[^}]+\}/g);
         return matches ? [...new Set(matches)] : [];
+    };
+
+    // Receipt handlers
+    const handleGenerateReceipt = () => {
+        const customer = customers.find(c => c.id === receiptCustomerId);
+        if (!customer || !receiptAmount) {
+            addToast('Preencha todos os campos', 'warning');
+            return;
+        }
+        const receipt = documentService.generateReceipt({
+            customerId: customer.id,
+            customerName: customer.name,
+            amount: parseFloat(receiptAmount),
+            paymentMethod: receiptMethod as 'PIX' | 'TRANSFERENCIA' | 'DINHEIRO' | 'BOLETO',
+            installmentNumber: 1,
+            reference: `PAG-${Date.now()}`
+        });
+        addToast('Recibo gerado com sucesso!', 'success');
+        setIsReceiptModalOpen(false);
+        setReceiptCustomerId('');
+        setReceiptAmount('');
+        loadData();
+    };
+
+    const handlePreviewReceipt = (receipt: Receipt) => {
+        const html = documentService.getReceiptHTML(receipt, brandSettings);
+        setPreviewHTML(html);
+        setPreviewDoc(null);
+        setIsPreviewOpen(true);
+    };
+
+    const handleDownloadReceipt = (receipt: Receipt) => {
+        const html = documentService.getReceiptHTML(receipt, brandSettings);
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `recibo_${receipt.id}.html`;
+        a.click();
+        URL.revokeObjectURL(url);
+        addToast('Recibo baixado!', 'success');
+    };
+
+    // Declaration handlers
+    const handleGenerateDeclaration = () => {
+        const customer = customers.find(c => c.id === declarationCustomerId);
+        const loan = loans.find(l => l.id === declarationLoanId);
+        if (!customer || !loan) {
+            addToast('Selecione cliente e empréstimo', 'warning');
+            return;
+        }
+        const declaration = documentService.generateDischargeDeclaration({
+            customerId: customer.id,
+            customerName: customer.name,
+            cpf: customer.cpf,
+            loanId: loan.id,
+            originalAmount: loan.amount,
+            totalPaid: loan.amount
+        });
+        addToast('Declaração gerada com sucesso!', 'success');
+        setIsDeclarationModalOpen(false);
+        setDeclarationCustomerId('');
+        setDeclarationLoanId('');
+        loadData();
+    };
+
+    const handlePreviewDeclaration = (decl: DischargeDeclaration) => {
+        const html = documentService.getDeclarationHTML(decl, brandSettings);
+        setPreviewHTML(html);
+        setPreviewDoc(null);
+        setIsPreviewOpen(true);
+    };
+
+    const handleDownloadDeclaration = (decl: DischargeDeclaration) => {
+        const html = documentService.getDeclarationHTML(decl, brandSettings);
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `quitacao_${decl.id}.html`;
+        a.click();
+        URL.revokeObjectURL(url);
+        addToast('Declaração baixada!', 'success');
     };
 
     const customerLoans = selectedCustomerId
@@ -324,8 +416,8 @@ export const DocumentsPage: React.FC = () => {
                             <div className="flex justify-between items-start mb-4">
                                 <div>
                                     <span className={`text-xs px-2 py-1 rounded-full ${template.type === 'LOAN' ? 'bg-blue-900/50 text-blue-400' :
-                                            template.type === 'REFINANCE' ? 'bg-purple-900/50 text-purple-400' :
-                                                'bg-zinc-800 text-zinc-400'
+                                        template.type === 'REFINANCE' ? 'bg-purple-900/50 text-purple-400' :
+                                            'bg-zinc-800 text-zinc-400'
                                         }`}>
                                         {template.type === 'LOAN' ? 'Empréstimo' : template.type === 'REFINANCE' ? 'Refinanciamento' : 'Personalizado'}
                                     </span>
@@ -374,19 +466,133 @@ export const DocumentsPage: React.FC = () => {
 
             {/* Receipts Tab */}
             {activeTab === 'receipts' && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-                    <p className="text-zinc-500 text-center py-8">
-                        Recibos disponíveis em Financeiro &gt; Documentos &gt; Recibos
-                    </p>
+                <div className="space-y-4">
+                    <div className="flex justify-end mb-4">
+                        <Button onClick={() => setIsReceiptModalOpen(true)}>
+                            <ReceiptIcon size={18} /> Gerar Recibo
+                        </Button>
+                    </div>
+                    {receipts.length === 0 ? (
+                        <div className="text-center py-16 bg-zinc-900 border border-zinc-800 rounded-2xl">
+                            <ReceiptIcon size={64} className="mx-auto mb-4 text-zinc-600" />
+                            <p className="text-zinc-400 text-lg mb-2">Nenhum recibo gerado</p>
+                            <p className="text-sm text-zinc-500">Gere recibos ao confirmar pagamentos</p>
+                        </div>
+                    ) : (
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-zinc-800 bg-zinc-800/50">
+                                        <th className="text-left py-4 px-6 text-zinc-400 font-medium">Recibo</th>
+                                        <th className="text-left py-4 px-6 text-zinc-400 font-medium">Cliente</th>
+                                        <th className="text-left py-4 px-6 text-zinc-400 font-medium">Valor</th>
+                                        <th className="text-left py-4 px-6 text-zinc-400 font-medium">Data</th>
+                                        <th className="text-left py-4 px-6 text-zinc-400 font-medium">Método</th>
+                                        <th className="text-right py-4 px-6 text-zinc-400 font-medium">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {receipts.map(receipt => (
+                                        <tr key={receipt.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30">
+                                            <td className="py-4 px-6 font-mono text-zinc-400">#{receipt.id.slice(-6)}</td>
+                                            <td className="py-4 px-6 font-bold text-white">{receipt.customerName}</td>
+                                            <td className="py-4 px-6 text-green-400">R$ {receipt.amount.toLocaleString()}</td>
+                                            <td className="py-4 px-6 text-zinc-400">
+                                                {new Date(receipt.paymentDate).toLocaleDateString('pt-BR')}
+                                            </td>
+                                            <td className="py-4 px-6">
+                                                <span className="bg-blue-900/50 text-blue-400 text-xs px-2 py-1 rounded">
+                                                    {receipt.paymentMethod}
+                                                </span>
+                                            </td>
+                                            <td className="py-4 px-6">
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        onClick={() => handlePreviewReceipt(receipt)}
+                                                        className="p-2 hover:bg-zinc-800 rounded-lg"
+                                                        title="Visualizar"
+                                                    >
+                                                        <Eye size={16} className="text-zinc-400" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDownloadReceipt(receipt)}
+                                                        className="p-2 hover:bg-zinc-800 rounded-lg"
+                                                        title="Download"
+                                                    >
+                                                        <Download size={16} className="text-zinc-400" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
             )}
 
             {/* Declarations Tab */}
             {activeTab === 'declarations' && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-                    <p className="text-zinc-500 text-center py-8">
-                        Declarações disponíveis em Financeiro &gt; Documentos &gt; Quitações
-                    </p>
+                <div className="space-y-4">
+                    <div className="flex justify-end mb-4">
+                        <Button onClick={() => setIsDeclarationModalOpen(true)}>
+                            <Award size={18} /> Gerar Quitação
+                        </Button>
+                    </div>
+                    {declarations.length === 0 ? (
+                        <div className="text-center py-16 bg-zinc-900 border border-zinc-800 rounded-2xl">
+                            <Award size={64} className="mx-auto mb-4 text-zinc-600" />
+                            <p className="text-zinc-400 text-lg mb-2">Nenhuma declaração gerada</p>
+                            <p className="text-sm text-zinc-500">Gere declarações para empréstimos quitados</p>
+                        </div>
+                    ) : (
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-zinc-800 bg-zinc-800/50">
+                                        <th className="text-left py-4 px-6 text-zinc-400 font-medium">ID</th>
+                                        <th className="text-left py-4 px-6 text-zinc-400 font-medium">Cliente</th>
+                                        <th className="text-left py-4 px-6 text-zinc-400 font-medium">CPF</th>
+                                        <th className="text-left py-4 px-6 text-zinc-400 font-medium">Valor Original</th>
+                                        <th className="text-left py-4 px-6 text-zinc-400 font-medium">Data</th>
+                                        <th className="text-right py-4 px-6 text-zinc-400 font-medium">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {declarations.map(decl => (
+                                        <tr key={decl.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30">
+                                            <td className="py-4 px-6 font-mono text-zinc-400">#{decl.id.slice(-6)}</td>
+                                            <td className="py-4 px-6 font-bold text-white">{decl.customerName}</td>
+                                            <td className="py-4 px-6 text-zinc-400">{decl.cpf}</td>
+                                            <td className="py-4 px-6 text-[#D4AF37]">R$ {decl.originalAmount.toLocaleString()}</td>
+                                            <td className="py-4 px-6 text-zinc-400">
+                                                {new Date(decl.generatedAt).toLocaleDateString('pt-BR')}
+                                            </td>
+                                            <td className="py-4 px-6">
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        onClick={() => handlePreviewDeclaration(decl)}
+                                                        className="p-2 hover:bg-zinc-800 rounded-lg"
+                                                        title="Visualizar"
+                                                    >
+                                                        <Eye size={16} className="text-zinc-400" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDownloadDeclaration(decl)}
+                                                        className="p-2 hover:bg-zinc-800 rounded-lg"
+                                                        title="Download"
+                                                    >
+                                                        <Download size={16} className="text-zinc-400" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
             )}
 
