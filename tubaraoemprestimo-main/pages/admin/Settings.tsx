@@ -189,6 +189,7 @@ export const Settings: React.FC = () => {
 
     setLoadingWa(true);
     setQrCode(null);
+    addToast("Verificando instância e configurando webhook...", 'info');
 
     try {
       const qr = await whatsappService.getQrCode();
@@ -199,7 +200,7 @@ export const Settings: React.FC = () => {
         // Se não retornou QR, talvez já esteja conectado
         const status = await checkWaStatus();
         if (status === 'open') {
-          addToast("Instância já está conectada!", 'success');
+          addToast("Instância já está conectada e configurada!", 'success');
         } else {
           // Could be that the instance exists but is not connected and didn't return QR (e.g. connecting state)
           addToast("Não foi possível obter o QR Code. Verifique o status.", 'warning');

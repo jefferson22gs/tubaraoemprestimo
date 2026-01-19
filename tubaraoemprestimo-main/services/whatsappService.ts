@@ -21,6 +21,42 @@ export const whatsappService = {
 
     // --- EVOLUTION API REAL INTEGRATION (v2.3.7 Compatible) ---
 
+    // Ensure Webhook is Configured
+    ensureWebhookConfigured: async (config: WhatsappConfig): Promise<boolean> => {
+        const baseUrl = cleanUrl(config.apiUrl);
+        const webhookUrl = "https://cwhiujeragsethxjekkb.supabase.co/functions/v1/whatsapp-webhook";
+
+        try {
+            console.log(`[WhatsApp] Configuring webhook for ${config.instanceName}...`);
+            // Evolution v2 endpoint for setting webhook
+            const response = await fetch(`${baseUrl}/webhook/set/${config.instanceName}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': config.apiKey,
+                    'ngrok-skip-browser-warning': 'true'
+                },
+                body: JSON.stringify({
+                    url: webhookUrl,
+                    webhookByEvents: false,
+                    events: ["MESSAGES_UPSERT"],
+                    enabled: true
+                })
+            });
+
+            if (!response.ok) {
+                console.error("[WhatsApp] Webhook Config Failed:", await response.text());
+                return false;
+            }
+
+            console.log("[WhatsApp] Webhook configured successfully!");
+            return true;
+        } catch (e) {
+            console.error("[WhatsApp] Webhook Config Exception:", e);
+            return false;
+        }
+    },
+
     // Check Connection State
     checkConnectionState: async (): Promise<'open' | 'close' | 'connecting' | 'unknown'> => {
         const config = await supabaseService.getWhatsappConfig();
@@ -70,11 +106,18 @@ export const whatsappService = {
 
             if (!response.ok) {
                 const errText = await response.text();
+                // Ignore if error is "Instance already exists" (403 or 409)
+                if (response.status === 403 || errText.includes('already exists')) {
+                    // Even if it exists, ensure webhook is set
+                    await whatsappService.ensureWebhookConfigured(config);
+                    return true;
+                }
                 console.error("[WhatsApp] Create Instance Failed:", errText);
-                // Ignore if error is "Instance already exists" (403 or 409 depending on version)
-                if (response.status === 403 || errText.includes('already exists')) return true;
                 return false;
             }
+
+            // Instance created, now configure webhook
+            await whatsappService.ensureWebhookConfigured(config);
             return true;
         } catch (e) {
             console.error("[WhatsApp] Create Exception:", e);
@@ -97,6 +140,9 @@ export const whatsappService = {
         };
 
         try {
+            // 0. Ensure webhook is configured (proactive)
+            whatsappService.ensureWebhookConfigured(config).catch(err => console.error("Webhook msg:", err));
+
             // 1. Try to connect (Get QR)
             let response = await fetch(`${baseUrl}/instance/connect/${config.instanceName}`, {
                 method: 'GET',
@@ -208,6 +254,7 @@ export const whatsappService = {
                 return true;
             } else {
                 const errorText = await response.text();
+                // Treat 401/403 as disconnected info potentially?
                 console.error("[WhatsApp Service] API Error:", errorText);
                 return false;
             }
