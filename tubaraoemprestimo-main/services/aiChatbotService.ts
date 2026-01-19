@@ -344,5 +344,3 @@ Empréstimos Ativos: ${customer.active_loans_count || 0}`;
         return response;
     }
 };
-/ /   F o r c e   r e b u i l d   0 1 / 1 9 / 2 0 2 6   1 5 : 1 1 : 0 7  
- 
